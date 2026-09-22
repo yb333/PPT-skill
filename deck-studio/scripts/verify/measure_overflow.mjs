@@ -46,8 +46,8 @@ try {
   await page.addStyleTag({ content: `
     /* 舞台架构静态化：取消缩放、页全显纵向堆叠（兼容旧滚动 deck，为 no-op） */
     html,body{overflow:visible!important;height:auto!important;}
-    .deck-stage{position:static!important;}
-    .deck-fit{transform:none!important;width:1920px!important;height:auto!important;box-shadow:none!important;}
+    .deck-stage{position:static!important;overflow:visible!important;height:auto!important;}
+    .deck-fit{transform:none!important;width:1920px!important;height:auto!important;box-shadow:none!important;margin:0 auto!important;}
     section.slide{position:relative!important;inset:auto!important;visibility:visible!important;opacity:1!important;display:flex!important;}
     /* 播放器杂物隐藏 */
     .deck-bar,.deck-menu,.deck-sidebar,.deck-progress,.nav-dots,.pres-cursor,.pres-cursor-hint,.player-hint,.keyboard-hint{display:none!important;}

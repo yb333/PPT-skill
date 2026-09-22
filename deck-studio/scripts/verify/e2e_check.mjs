@@ -51,7 +51,9 @@ try {
   const s0 = await state();
   ok(s0.total >= 2, `页数 ${s0.total} ≥ 2`);
   ok(s0.current === 0, `打开后第 1 页为当前页（实际 current=${s0.current}）`);
-  ok(s0.scrollModel.docH <= 1200, `零滚动模型：docH=${s0.scrollModel.docH} ≤ 1200（滚动架构残留会 >2000）`);
+  ok(s0.scrollModel.docH <= 1200, `根文档零滚动：docH=${s0.scrollModel.docH} ≤ 1200（滚动只允许在 stage 容器内）`);
+  ok(await page.evaluate(() => document.getElementById('deckStage').scrollHeight > 1500),
+     '浏览模式=无缝长页（stage 内容高度远超一屏）');
 
   // —— 浏览模式：逐页翻页，reveal 必须全可见（阅读模式），无白页 ——
   console.log('== 浏览模式逐页翻页 ==');
@@ -121,7 +123,12 @@ try {
     ok(toc.open, '点胶囊打开侧栏');
     ok(toc.items === s0.total && toc.clones === s0.total, `缩略图数 = 页数（${toc.items}/${toc.clones} vs ${s0.total}）`);
     await page.evaluate(() => document.querySelectorAll('#deckThumbs .thumb-item')[0].click());
-    await page.waitForTimeout(500);
+    await page.waitForFunction(() => {
+      const s = [...document.querySelectorAll('section.slide')];
+      return s.findIndex(x => x.classList.contains('current')) === 0 &&
+             document.getElementById('deckStage').scrollTop < 10;
+    }, { timeout: 5000 }).catch(() => {});
+    await page.waitForTimeout(300);
     st = await state();
     ok(st.current === 0, `点缩略图跳页（current=${st.current}）`);
     ok(await page.evaluate(() => !document.getElementById('deckSidebar').classList.contains('open')), '跳页后侧栏自动关闭');

@@ -29,8 +29,8 @@ frontend-slides 的融合重构后继（研发仓：`/Users/yuanbo/frontend-slid
 ## Deck ↔ 工具契约（每个生成的 deck 必须遵守，验证/导出工具按此工作）
 
 1. 页面元素：`<section class="slide" data-label="页面标识">`，置于舞台 `<div class="deck-stage"><div class="deck-fit">` 内。`data-label` 是页的唯一标识（中文短语），工具按它定位页。
-2. 画布：`.deck-fit` 固定 1920×1080，JS 缩放适配窗口（player.md 引擎）；页内 px 排版（layout.md 刻度），**禁止** 100vw/100vh、clamp()、滚动、IntersectionObserver。
-3. 渐显：`.reveal` + `.slide.current` 全显（浏览）/ `body.presenting` 下按 `.shown` 节拍步进（放映）。不用 IO。
+2. 画布：`.deck-fit` 固定 1920×1080，JS 缩放适配窗口（player.md 引擎）；页内 px 排版（layout.md 刻度），**禁止** 100vw/100vh、clamp()、IntersectionObserver；根文档零滚动——浏览模式的滚动发生在 `.deck-stage` 容器内。
+3. 模式：`body.browse`（默认，无缝长页滚动，reveal 全显）/ `body.presenting`（放映，单页 letterbox，`.reveal` 按 `.shown` 节拍收放）。不用 IO。
 4. 播放器杂物统一类名：`.deck-stage` / `.deck-fit` / `.deck-bar` / `.deck-progress` / `.nav-dots` / `.pres-cursor` / `.pres-cursor-hint` / `.player-hint`——工具截图/测量前会隐藏或静态化它们。
 5. 主题色一律走 CSS 变量 token（`references/theme.md`），不写死 hex。
 
@@ -95,7 +95,7 @@ node ~/.zcode/skills/deck-studio/scripts/verify/shot.mjs <deck.html> <data-label
 ## Phase 7: 交付
 
 1. 清理 `.claude-design/slide-previews/` 等临时产物。
-2. 交付 HTML（`open <file>.html` 或发文件路径），附导航说明（←/→/Space 翻页、F 全屏、P 聚光灯）。
+2. 交付 HTML（`open <file>.html` 或发文件路径），附导航说明（滚轮滚动浏览、←/→ 页级定位、F 放映（→/单击逐条推进）、P 聚光灯、左上角 ☰ 页面目录）。
 3. 用户需要 .pptx 时导出（宪法 2：快照投影，无动画）：
 
 ```bash
@@ -113,7 +113,7 @@ python3 ~/.zcode/skills/deck-studio/scripts/html2pptx/convert.py <deck.html> <ou
 | `references/presets.md` | Phase 3 —— 12 套预设清单与 token 覆盖 |
 | `references/layouts.md` | Phase 2/4 —— 页型库：默认选库内页型，自绘例外 |
 | `references/layout.md` | Phase 4 —— 固定画布排版刻度、卡片语汇、密度、审美硬要求 |
-| `references/player.md` | Phase 4 —— 舞台引擎（双模式/缩放/步进）标准实现 |
+| `references/player.md` | Phase 4 —— 舞台引擎（浏览=无缝长页 / 放映=节拍步进、缩略图侧栏、聚光灯）标准实现 |
 | `references/svg-diagrams.md` | Phase 4 —— 架构图/流程图/图表规范与模板 |
 | `references/animation.md` | Phase 4 —— 动画两层策略与词表 |
 | `references/copywriting.md` | Phase 1/2/4 —— 文案规范（中文、标题句式、数字） |

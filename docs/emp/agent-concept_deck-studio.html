@@ -1,7 +1,7 @@
 <!DOCTYPE html>
-<!-- deck-studio 试用构建 v2（舞台架构）：由 docs/emp/agent-concept_副本.html 重建（原文件保留不动）。
-     v2 变更（2026-09-22 白页事故后）：滚动架构退役 → 固定 1920×1080 舞台（deck-stage>deck-fit 缩放），
-     浏览/放映双模式（F/工具条放映，放映下 reveal 节拍步进），滚轮=逐页手势，零滚动零 IO；
+<!-- deck-studio 试用构建 v3（双模式）：浏览模式=无缝长页滚动（stage 容器内，像 PDF 阅读器，每页独立投影卡片），
+     放映模式（F/工具条）=全屏单页 letterbox + reveal 节拍步进，末页两次确认退出；
+     左上角 ☰ 页面目录（DOM 克隆缩略图）；固定 1920×1080 画布缩放适配，根文档零滚动零 IO；
      px 排版刻度（eyebrow 18 mono / 标题 40 / 正文 21 地板）；色板宪法与 data-label 契约同 v1。
      五个内容页为自绘 SVG（页型库之外的场景），坐标与内容与原版一致。 -->
 <html lang="zh-CN">
@@ -23,22 +23,24 @@
 html, body { height: 100%; margin: 0; overflow: hidden; }
 body { background: #e8eaf0; font-family: "PingFang SC", "Microsoft YaHei", -apple-system, sans-serif; color: var(--text); }
 
-/* 舞台 */
-.deck-stage { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+/* 舞台：放映=单页居中；浏览=长页滚动容器 */
+.deck-stage { position: fixed; inset: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; }
 .deck-fit { width: 1920px; height: 1080px; flex: 0 0 auto; position: relative; overflow: hidden;
-    background: #fff; box-shadow: 0 12px 48px rgba(15,23,42,.18); border-radius: 8px; transform-origin: center center; }
-
-/* 页 */
-.slide { position: absolute; inset: 0; width: 1920px; height: 1080px; padding: 56px 90px;
-    display: flex; flex-direction: column; overflow: hidden; background: #fff;
-    visibility: hidden; opacity: 0; transition: opacity .35s ease, visibility 0s linear .35s; }
-.slide.current { visibility: visible; opacity: 1; transition: opacity .35s ease; }
-.slide-content { flex: 1; display: flex; flex-direction: column; min-height: 0; gap: 14px; }
-.reveal { opacity: 0; transform: translateY(18px); transition: opacity .5s var(--ease-out-expo), transform .5s var(--ease-out-expo); }
-.slide.current .reveal { opacity: 1; transform: none; }
+    background: #fff; box-shadow: 0 12px 48px rgba(15,23,42,.18); border-radius: 8px; }
+.slide { width: 1920px; height: 1080px; padding: 56px 90px; display: flex; flex-direction: column;
+    overflow: hidden; background: #fff; flex: 0 0 auto; }
+.reveal { transition: opacity .5s var(--ease-out-expo), transform .5s var(--ease-out-expo); }
 body.presenting .slide.current .reveal:not(.shown) { opacity: 0 !important; transform: translateY(18px) !important; }
+body:not(.browse) .deck-fit { transform-origin: center center; }
+body:not(.browse) .slide { position: absolute; inset: 0; visibility: hidden; opacity: 0;
+    transition: opacity .35s ease, visibility 0s linear .35s; }
+body:not(.browse) .slide.current { visibility: visible; opacity: 1; transition: opacity .35s ease; }
+body.browse .deck-stage { display: block; overflow-y: auto; overflow-x: hidden; padding: 16px 0 40px; }
+body.browse .deck-fit { height: auto; transform-origin: top left; box-shadow: none; border-radius: 0; background: transparent; }
+body.browse .slide { position: relative; margin-bottom: 24px; border-radius: 8px; box-shadow: 0 10px 32px rgba(15,23,42,.12); }
 
 /* 排版刻度（px） */
+.slide-content { flex: 1; display: flex; flex-direction: column; min-height: 0; gap: 14px; }
 .page-head { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
 .page-num { font-family: ui-monospace, "JetBrains Mono", monospace; font-size: 18px; letter-spacing: .2em; color: var(--c-exec); font-weight: 600; }
 .page-title { font-size: 40px; font-weight: 700; color: var(--text); line-height: 1.2; }
@@ -71,29 +73,6 @@ body.presenting .slide.current .reveal:not(.shown) { opacity: 0 !important; tran
 .deck-present-btn { border: none; cursor: pointer; border-radius: 999px; padding: 6px 14px;
     background: var(--c-exec); color: #fff; font-size: 13px; font-weight: 600; }
 .deck-present-btn:hover { filter: brightness(1.08); }
-.pres-cursor { position: fixed; pointer-events: none; z-index: 9999; width: 0; height: 0; opacity: 0; transition: opacity .4s ease; }
-.pres-cursor.active { opacity: 1; }
-.pres-cursor.fading .pres-spotlight { opacity: .04; }
-.pres-cursor.fading .pres-dot { opacity: .4; }
-.pres-spotlight { position: absolute; width: 220px; height: 220px; top: 50%; left: 50%;
-    transform: translate(-50%,-50%); border-radius: 50%;
-    background: radial-gradient(circle, rgba(59,130,246,.16) 0%, rgba(59,130,246,.09) 35%, rgba(59,130,246,.03) 60%, transparent 80%);
-    opacity: .14; transition: opacity .6s ease; }
-.pres-dot { position: absolute; width: 8px; height: 8px; top: 50%; left: 50%;
-    transform: translate(-50%,-50%); border-radius: 50%; background: var(--c-info);
-    box-shadow: 0 0 8px rgba(59,130,246,.5); transition: opacity .6s ease; }
-.pres-cursor-hint, .player-hint { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-    font-size: 12px; color: var(--text-faint); background: rgba(255,255,255,.9);
-    padding: 6px 16px; border-radius: 20px; border: 1px solid var(--border-card);
-    z-index: 9999; opacity: 0; transition: opacity .3s ease; pointer-events: none; white-space: nowrap; }
-.pres-cursor-hint.show, .player-hint.show { opacity: 1; }
-body.presenting { cursor: pointer; }
-body.presenting .deck-bar, body.presenting .nav-dots, body.presenting .deck-progress { opacity: 0; pointer-events: none; }
-@media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .2s !important; }
-}
-
-/* 左上角目录胶囊 + 缩略图侧边窗 */
 .deck-menu { position: fixed; top: 14px; left: 16px; z-index: 110; display: flex; align-items: center; gap: 8px;
     background: rgba(255,255,255,.72); backdrop-filter: blur(12px); border: 1px solid rgba(226,232,240,.9);
     border-radius: 999px; padding: 9px 16px; cursor: pointer; font-size: 13px; color: var(--text-sub);
@@ -114,14 +93,38 @@ body.presenting .deck-bar, body.presenting .nav-dots, body.presenting .deck-prog
 .thumb-inner { width: 1920px; height: 1080px; transform: scale(0.15); transform-origin: top left; position: relative; }
 .thumb-page { position: absolute !important; inset: 0 !important; width: 1920px !important; height: 1080px !important;
     display: flex !important; flex-direction: column; padding: 56px 90px !important;
-    visibility: visible !important; opacity: 1 !important; background: #fff; overflow: hidden; }
+    visibility: visible !important; opacity: 1 !important; background: #fff; overflow: hidden;
+    box-shadow: none !important; border-radius: 0 !important; margin: 0 !important; }
 .thumb-page.cover { padding: 108px 130px !important; }
 .thumb-page .reveal { opacity: 1 !important; transform: none !important; }
 .thumb-label { font-size: 12px; color: var(--text-sub); padding: 6px 4px; }
+.pres-cursor { position: fixed; pointer-events: none; z-index: 9999; width: 0; height: 0; opacity: 0; transition: opacity .4s ease; }
+.pres-cursor.active { opacity: 1; }
+.pres-cursor.fading .pres-spotlight { opacity: .04; }
+.pres-cursor.fading .pres-dot { opacity: .4; }
+.pres-spotlight { position: absolute; width: 220px; height: 220px; top: 50%; left: 50%;
+    transform: translate(-50%,-50%); border-radius: 50%;
+    background: radial-gradient(circle, rgba(59,130,246,.16) 0%, rgba(59,130,246,.09) 35%, rgba(59,130,246,.03) 60%, transparent 80%);
+    opacity: .14; transition: opacity .6s ease; }
+.pres-dot { position: absolute; width: 8px; height: 8px; top: 50%; left: 50%;
+    transform: translate(-50%,-50%); border-radius: 50%; background: var(--c-info);
+    box-shadow: 0 0 8px rgba(59,130,246,.5); transition: opacity .6s ease; }
+.pres-cursor-hint, .player-hint { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    font-size: 12px; color: var(--text-faint); background: rgba(255,255,255,.9);
+    padding: 6px 16px; border-radius: 20px; border: 1px solid var(--border-card);
+    z-index: 9999; opacity: 0; transition: opacity .3s ease; pointer-events: none; white-space: nowrap; }
+.pres-cursor-hint.show, .player-hint.show { opacity: 1; }
+body.presenting { cursor: pointer; }
+body.presenting .deck-bar, body.presenting .deck-menu,
+body.presenting .nav-dots, body.presenting .deck-progress,
+body.presenting .deck-sidebar { opacity: 0; pointer-events: none; }
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .2s !important; }
+}
 </style>
 </head>
-<body>
-<div class="deck-stage">
+<body class="browse">
+<div class="deck-stage" id="deckStage">
 <div class="deck-fit" id="deckFit">
 
 <!-- ============ 封面 ============ -->
@@ -763,25 +766,57 @@ body.presenting .deck-bar, body.presenting .nav-dots, body.presenting .deck-prog
     <div class="pres-dot"></div>
 </div>
 <div class="pres-cursor-hint" id="presCursorHint">按 P 开关演示光标</div>
-<div class="player-hint" id="playerHint">←→ 翻页 · F 放映 · P 聚光灯</div>
+<div class="player-hint" id="playerHint">滚动浏览 · F 放映 · P 聚光灯</div>
 
 <script>
+const DECK_GAP = 24;
 class DeckPlayer {
     constructor() {
+        this.stageEl = document.getElementById('deckStage');
         this.fitEl = document.getElementById('deckFit');
         this.slides = [...this.fitEl.querySelectorAll('section.slide')];
-        this.current = 0; this.presenting = false; this.cursorOn = false; this.endArm = false;
-        this.wheelAcc = 0; this.wheelQuiet = null;
+        this.current = 0; this.mode = 'browse'; this.presenting = false; this.cursorOn = false;
+        this.endArm = false; this.scale = 1;
+        this.wheelAcc = 0; this.wheelQuiet = null; this.scrollRaf = null;
         this.hideTimer = null; this.rafId = null;
         this.mx = -200; this.my = -200; this.cx = -200; this.cy = -200;
-        this.buildDots(); this.buildThumbs(); this.fit(); this.show(0);
+        this.buildDots(); this.buildThumbs(); this.applyMode(); this.applyCurrent(0); this.syncChrome();
         addEventListener('resize', () => this.fit());
-        this.bindKeys(); this.bindWheel(); this.bindClick(); this.bindPresent(); this.bindCursor();
+        this.bindKeys(); this.bindWheel(); this.bindScroll(); this.bindClick(); this.bindPresent(); this.bindCursor();
         document.getElementById('deckMenu').addEventListener('click', () => this.toggleToc());
         document.getElementById('tocClose').addEventListener('click', () => this.closeToc());
-        this.flashHint('playerHint', '←→ 翻页 · F 放映 · P 聚光灯', 4000);
+        this.flashHint('playerHint', '滚动浏览 · ←→ 定位 · F 放映 · P 聚光灯', 4000);
     }
-    fit() { this.fitEl.style.transform = `scale(${Math.min(innerWidth / 1920, innerHeight / 1080)})`; }
+    pitch() { return 1080 * this.scale + DECK_GAP; }
+    fit() {
+        this.scale = Math.min(innerWidth / 1920, innerHeight / 1080);
+        this.fitEl.style.transform = `scale(${this.scale})`;
+        if (this.mode === 'browse') {
+            this.fitEl.style.transformOrigin = 'top left';
+            this.fitEl.style.marginLeft = Math.max(0, (innerWidth - 1920 * this.scale) / 2) + 'px';
+            const flowH = this.slides.length * 1080 + (this.slides.length - 1) * DECK_GAP;
+            this.fitEl.style.marginBottom = (flowH * this.scale - flowH) + 'px';
+            this.stageEl.scrollTop = this.current * this.pitch();
+        } else {
+            this.fitEl.style.transformOrigin = 'center center';
+            this.fitEl.style.marginLeft = '';
+            this.fitEl.style.marginBottom = '';
+        }
+    }
+    applyMode() {
+        document.body.classList.toggle('browse', this.mode === 'browse');
+        document.body.classList.toggle('presenting', this.mode === 'present');
+        this.fit();
+        if (this.mode === 'browse') this.stageEl.scrollTop = this.current * this.pitch();
+    }
+    applyCurrent(i) { this.slides.forEach((s, k) => s.classList.toggle('current', k === i)); }
+    syncChrome() {
+        document.getElementById('progressBar').style.width = ((this.current + 1) / this.slides.length * 100) + '%';
+        document.getElementById('deckPage').textContent = `${this.current + 1} / ${this.slides.length}`;
+        document.getElementById('deckMenuPage').textContent = `${this.current + 1}/${this.slides.length}`;
+        this.dots?.forEach((d, k) => d.classList.toggle('active', k === this.current));
+        this.thumbs?.forEach((t, k) => t.classList.toggle('active', k === this.current));
+    }
     buildDots() {
         const nav = document.getElementById('navDots');
         this.slides.forEach((s, i) => {
@@ -825,17 +860,16 @@ class DeckPlayer {
     closeToc() { document.getElementById('deckSidebar').classList.remove('open'); }
     show(i) {
         i = Math.max(0, Math.min(this.slides.length - 1, i));
-        if (i === this.current && this.slides[i].classList.contains('current')) return; // 同页重入：不重置节拍
-        this.slides[this.current].classList.remove('current');
-        this.current = i;
-        const s = this.slides[i];
-        s.classList.add('current');
-        if (this.presenting) s.querySelectorAll('.shown').forEach(e => e.classList.remove('shown'));
-        document.getElementById('progressBar').style.width = ((i + 1) / this.slides.length * 100) + '%';
-        document.getElementById('deckPage').textContent = `${i + 1} / ${this.slides.length}`;
-        document.getElementById('deckMenuPage').textContent = `${i + 1}/${this.slides.length}`;
-        this.dots.forEach((d, k) => d.classList.toggle('active', k === i));
-        this.thumbs?.forEach((t, k) => t.classList.toggle('active', k === i));
+        if (this.mode === 'present') {
+            if (i === this.current && this.slides[i].classList.contains('current')) return;
+            this.current = i;
+            this.applyCurrent(i);
+            if (this.presenting) this.slides[i].querySelectorAll('.shown').forEach(e => e.classList.remove('shown'));
+        } else {
+            this.current = i;
+            this.stageEl.scrollTo({ top: i * this.pitch(), behavior: 'smooth' });
+        }
+        this.syncChrome();
     }
     step() {
         if (this.presenting) {
@@ -844,9 +878,7 @@ class DeckPlayer {
             if (this.current < this.slides.length - 1) { this.show(this.current + 1); this.endArm = false; return; }
             if (!this.endArm) { this.endArm = true; this.flashHint('playerHint', '已是最后一页 · 再按一次结束放映', 2600); return; }
             this.endArm = false;
-            this.presenting = false;
-            document.body.classList.remove('presenting');
-            if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+            this.endPresent();
             this.flashHint('playerHint', '放映结束', 2200);
             return;
         }
@@ -879,7 +911,7 @@ class DeckPlayer {
     }
     bindWheel() {
         addEventListener('wheel', e => {
-            if (e.ctrlKey || e.metaKey) return;
+            if (!this.presenting || e.ctrlKey || e.metaKey) return;
             e.preventDefault();
             clearTimeout(this.wheelQuiet);
             this.wheelAcc += e.deltaY;
@@ -889,34 +921,40 @@ class DeckPlayer {
             }, 180);
         }, { passive: false });
     }
+    bindScroll() {
+        this.stageEl.addEventListener('scroll', () => {
+            if (this.mode !== 'browse' || this.scrollRaf) return;
+            this.scrollRaf = requestAnimationFrame(() => {
+                this.scrollRaf = null;
+                const i = Math.max(0, Math.min(this.slides.length - 1, Math.round(this.stageEl.scrollTop / this.pitch())));
+                if (i !== this.current) { this.current = i; this.applyCurrent(i); this.syncChrome(); }
+            });
+        }, { passive: true });
+    }
     bindClick() {
         document.addEventListener('click', e => {
             if (!this.presenting) return;
-            if (e.target.closest('a,button,input,textarea,select,.deck-bar,.nav-dots')) return;
+            if (e.target.closest('a,button,input,textarea,select,.deck-bar,.deck-menu,.nav-dots,.deck-sidebar')) return;
             this.step();
         });
     }
     togglePresent() {
-        if (this.presenting) {
-            this.presenting = false;
-            this.endArm = false;
-            document.body.classList.remove('presenting');
-            if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
-            return;
-        }
-        this.presenting = true;
-        document.body.classList.add('presenting');
+        if (this.presenting) { this.endPresent(); return; }
+        this.mode = 'present'; this.presenting = true; this.endArm = false;
+        this.applyMode();
+        this.applyCurrent(this.current);
         this.slides[this.current].querySelectorAll('.shown').forEach(el => el.classList.remove('shown'));
         document.documentElement.requestFullscreen?.().catch(() => {});
         this.flashHint('playerHint', '放映中 · →/单击 逐条推进 · F 退出', 3000);
     }
+    endPresent() {
+        this.mode = 'browse'; this.presenting = false; this.endArm = false;
+        document.body.classList.remove('presenting');
+        if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+        this.applyMode();
+    }
     bindPresent() {
         document.getElementById('presentBtn').addEventListener('click', () => this.togglePresent());
-        document.addEventListener('fullscreenchange', () => {
-            if (!document.fullscreenElement && this.presenting) {
-                this.presenting = false; document.body.classList.remove('presenting');
-            }
-        });
     }
     bindCursor() {
         this.cursor = document.getElementById('presCursor');
