@@ -207,7 +207,7 @@ class DeckPlayer {
             label.className = 'thumb-label';
             label.textContent = `${i + 1}. ${s.dataset.label || ''}`;
             item.append(box, label);
-            item.addEventListener('click', () => { this.show(i); this.closeToc(); });
+            item.addEventListener('click', () => this.show(i));   // 跳页但保持侧栏打开，便于连续预览
             wrap.appendChild(item);
             return item;
         });
@@ -293,6 +293,8 @@ class DeckPlayer {
     }
     bindClick() {
         document.addEventListener('click', e => {
+            const sb = document.getElementById('deckSidebar');
+            if (sb?.classList.contains('open') && !e.target.closest('.deck-sidebar, .deck-menu')) { this.closeToc(); return; } // 点侧栏外即关闭
             if (!this.presenting) return;
             if (e.target.closest('a,button,input,textarea,select,.deck-bar,.deck-menu,.nav-dots,.deck-sidebar')) return;
             this.step();

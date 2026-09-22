@@ -180,10 +180,52 @@ class DeckPlayer {
         this.thumbs?.forEach((t, k) => t.classList.toggle('active', k === this.current));
     }
 
-    buildDots() { /* 同 v2：N 个 dot（含封面），click → show(i) */ }
-    buildThumbs() { /* 同 v2：DOM 克隆 .thumb-page，click → show(i)+closeToc() */ }
-    toggleToc() { /* 同 v2 */ }
-    closeToc() { /* 同 v2 */ }
+    buildDots() {
+        const nav = document.getElementById('navDots');
+        this.slides.forEach((s, i) => {
+            const d = document.createElement('div');
+            d.className = 'nav-dot';
+            d.title = s.dataset.label || `Slide ${i + 1}`;
+            d.addEventListener('click', () => this.show(i));
+            nav.appendChild(d);
+        });
+        this.dots = [...nav.children];
+    }
+    /* 缩略图侧边窗：DOM 克隆 + CSS 缩放（288/1920 = 0.15），零依赖实时预览 */
+    buildThumbs() {
+        const wrap = document.getElementById('deckThumbs');
+        if (!wrap) return;
+        this.thumbs = this.slides.map((s, i) => {
+            const item = document.createElement('div');
+            item.className = 'thumb-item';
+            const clone = s.cloneNode(true);
+            clone.classList.remove('slide');           // 脱离 .slide 契约选择器，防工具/引擎误伤
+            clone.classList.add('thumb-page');
+            clone.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
+            const box = document.createElement('div');
+            box.className = 'thumb-box';
+            const inner = document.createElement('div');
+            inner.className = 'thumb-inner';
+            inner.appendChild(clone);
+            box.appendChild(inner);
+            const label = document.createElement('div');
+            label.className = 'thumb-label';
+            label.textContent = `${i + 1}. ${s.dataset.label || ''}`;
+            item.append(box, label);
+            item.addEventListener('click', () => this.show(i));   // 跳页但保持侧栏打开，便于连续预览
+            wrap.appendChild(item);
+            return item;
+        });
+    }
+    toggleToc() {
+        const sb = document.getElementById('deckSidebar');
+        if (!sb) return;
+        sb.classList.toggle('open');
+        const active = this.thumbs?.[this.current];
+        if (sb.classList.contains('open') && active) active.scrollIntoView({ block: 'nearest' });
+        this.thumbs?.forEach((t, k) => t.classList.toggle('active', k === this.current));
+    }
+    closeToc() { document.getElementById('deckSidebar')?.classList.remove('open'); }
 
     /* 显式导航：放映=切 .current；浏览=平滑滚动到页首（滚动事件回收 current） */
     show(i) {
@@ -267,7 +309,15 @@ class DeckPlayer {
         }, { passive: true });
     }
 
-    bindClick() { /* 同 v2：仅放映态单击推进，交互元素豁免 */ }
+    bindClick() {
+        document.addEventListener('click', e => {
+            const sb = document.getElementById('deckSidebar');
+            if (sb?.classList.contains('open') && !e.target.closest('.deck-sidebar, .deck-menu')) { this.closeToc(); return; } // 点侧栏外即关闭
+            if (!this.presenting) return;
+            if (e.target.closest('a,button,input,textarea,select,.deck-bar,.deck-menu,.nav-dots,.deck-sidebar')) return;
+            this.step();
+        });
+    }
 
     togglePresent() {
         if (this.presenting) { this.endPresent(); return; }
@@ -302,5 +352,6 @@ new DeckPlayer();
 - **滚动回收 current**：浏览模式滚动事件 rAF 节流算页，`applyCurrent` 保持 `.current` 类（CSS 在 browse 下不用它控制可见性，但工具与 e2e 靠它判页）。
 - **同页重入护栏**：放映态 `show()` 对同页直接返回——否则末页再按 → 触发"进页清空 .shown"无限重演（2026-09-22 用户报告 bug）。
 - **末页语义**：放映节拍放完再按 → → 第一次武装提示，第二次 `endPresent()` 停在末页回浏览。
-- **缩略图 = DOM 克隆**（去 `.slide` 类、剥 id、`.thumb-page` 自足样式 + reveal 强制最终态）；Esc 关侧栏。
+- **缩略图 = DOM 克隆**（去 `.slide` 类、剥 id、`.thumb-page` 自足样式 + reveal 强制最终态）；点缩略图跳页**不关侧栏**（连续预览），点击侧栏外任意区域、Esc 或 × 关闭。
+- **侧栏点外即关的 return 语义**：关侧栏的那次点击不再推进页/节拍——一次点击只做一件事。
 - **工具侧契约**：measure_overflow / shot 注入强制 CSS（stage 静态化 + fit 取缩放与 margin + 页全显 + chrome 隐藏），见脚本内注释。

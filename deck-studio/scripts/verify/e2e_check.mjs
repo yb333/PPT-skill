@@ -131,7 +131,10 @@ try {
     await page.waitForTimeout(300);
     st = await state();
     ok(st.current === 0, `点缩略图跳页（current=${st.current}）`);
-    ok(await page.evaluate(() => !document.getElementById('deckSidebar').classList.contains('open')), '跳页后侧栏自动关闭');
+    ok(await page.evaluate(() => document.getElementById('deckSidebar').classList.contains('open')), '跳页后侧栏保持打开（连续预览）');
+    await page.mouse.click(960, 540);
+    await page.waitForTimeout(300);
+    ok(await page.evaluate(() => !document.getElementById('deckSidebar').classList.contains('open')), '点击侧栏外（页面内容）关闭');
     await page.click('#deckMenu');
     await page.waitForTimeout(400);
     await page.keyboard.press('Escape');
