@@ -7,12 +7,18 @@ HTML 演示技能（frontend-slides）的版本控制之家：技能本体 + 工
 
 ```
 frontend-slides/
-├── SKILL.md                 # 技能本体（ZCode 加载的运行时提示）
-├── STYLE_PRESETS.md         # 风格预设库（SKILL.md 引用）
+├── SKILL.md                 # 原技能本体（已冻结，不动——融合工作在 deck-studio/ 进行）
+├── STYLE_PRESETS.md         # 原风格预设库（已冻结）
+├── deck-studio/             # 新技能（融合重构工作线，标准 skill 结构）
+│   ├── SKILL.md             # 精简核心（<500 行）
+│   ├── references/          # 按需加载参考（theme/presets/layout/svg/animation/player/copywriting/process）
+│   ├── scripts/verify/      # 适配版验证工具（溢出门禁 + 单页截图，契约见文件头）
+│   └── assets/              # 测试 fixture（干净版/溢出版）
 ├── scripts/
-│   ├── html2pptx/           # HTML → PPTX 导出管线（vendor 自 AICO-PPT，待适配我们的 .slide 结构）
-│   └── verify/              # 渲染验证工具（vendor 自 AICO-PPT：溢出检测/单页截图/playwright 加载器）
+│   ├── html2pptx/           # HTML → PPTX 导出管线（vendor 原样，待适配进 deck-studio）
+│   └── verify/              # 渲染验证工具（vendor 原样，与上游可 diff）
 ├── docs/
+│   ├── DECISIONS.md         # 融合重构决策记录（动工前先读）
 │   └── aico-ppt-references/ # AICO-PPT 方法论文档（vendor 参考，见 THIRD-PARTY-NOTICE.md）
 └── THIRD-PARTY-NOTICE.md    # vendor 代码归属与来源
 ```
