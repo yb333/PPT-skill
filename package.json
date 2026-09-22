@@ -1,0 +1,9 @@
+{
+  "name": "frontend-slides",
+  "private": true,
+  "type": "module",
+  "description": "PPT 技能研发仓：frontend-slides 技能本体 + vendor 自 AICO-PPT 的 PPTX 导出与渲染验证工具",
+  "dependencies": {
+    "playwright-core": "^1.62.1"
+  }
+}
