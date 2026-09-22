@@ -31,7 +31,7 @@ frontend-slides 的融合重构后继（研发仓：`/Users/yuanbo/frontend-slid
 1. 页面元素：`<section class="slide" data-label="页面标识">`，置于舞台 `<div class="deck-stage"><div class="deck-fit">` 内。`data-label` 是页的唯一标识（中文短语），工具按它定位页。
 2. 画布：`.deck-fit` 固定 1920×1080，JS 缩放适配窗口（player.md 引擎）；页内 px 排版（layout.md 刻度），**禁止** 100vw/100vh、clamp()、IntersectionObserver；根文档零滚动——浏览模式的滚动发生在 `.deck-stage` 容器内。
 3. 模式：`body.browse`（默认，无缝长页滚动，reveal 全显）/ `body.presenting`（放映，单页 letterbox，`.reveal` 按 `.shown` 节拍收放）。不用 IO。
-4. 播放器杂物统一类名：`.deck-stage` / `.deck-fit` / `.deck-bar` / `.deck-progress` / `.nav-dots` / `.pres-cursor` / `.pres-cursor-hint` / `.player-hint`——工具截图/测量前会隐藏或静态化它们。
+4. 播放器 chrome 单一聚合：左上角 `.deck-bar` 一处容纳 ☰ 目录（开 `.deck-sidebar` 缩略图）/ 页码 / ▶ 放映，**不设** nav dots 等多处页码；全部契约类名：`.deck-stage` / `.deck-fit` / `.deck-bar` / `.deck-menu` / `.deck-sidebar` / `.deck-progress` / `.pres-cursor` / `.pres-cursor-hint` / `.player-hint`——工具截图/测量前会隐藏或静态化它们。
 5. 主题色一律走 CSS 变量 token（`references/theme.md`），不写死 hex。
 
 ## Phase 0: 模式识别

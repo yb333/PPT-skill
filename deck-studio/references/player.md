@@ -8,7 +8,7 @@
 换页/翻页是显式 `applyCurrent/goTo`，**不使用 IntersectionObserver**（白页事故根因，见 DECISIONS.md D7）；浏览模式的滚动发生在 `.deck-stage` 容器内，根文档永远零滚动。
 
 与工具的契约（measure_overflow / shot 会注入强制 CSS 并隐藏杂物）——**类名不可改**：
-`.deck-stage` / `.deck-fit` / `.deck-bar` / `.deck-menu` / `.deck-sidebar` / `.deck-progress` / `.nav-dots` / `.pres-cursor` / `.pres-cursor-hint` / `.player-hint`；页元素 `section.slide[data-label]`；渐显 `.reveal`；步进标记 `.shown`；模式类 `body.browse` / `body.presenting`。
+`.deck-stage` / `.deck-fit` / `.deck-bar` / `.deck-menu` / `.deck-sidebar` / `.deck-progress` / `.pres-cursor` / `.pres-cursor-hint` / `.player-hint`；页元素 `section.slide[data-label]`；渐显 `.reveal`；步进标记 `.shown`；模式类 `body.browse` / `body.presenting`。（`.nav-dots` 已废弃合并进 `.deck-bar`，工具隐藏清单保留其为旧 deck 兼容 no-op。）
 
 ## HTML（固定结构；body 初始带 browse 类）
 
@@ -22,9 +22,8 @@
 </div>
 
 <div class="deck-progress"><div id="progressBar"></div></div>
-<nav class="nav-dots" id="navDots" aria-label="页面导航"></nav>
-<button class="deck-menu" id="deckMenu" title="页面目录"><span>☰</span><span id="deckMenuPage">1/6</span></button>
 <header class="deck-bar" id="deckBar">
+  <button class="deck-menu" id="deckMenu" title="页面目录">☰</button>
   <span class="deck-page" id="deckPage">1 / 6</span>
   <button class="deck-present-btn" id="presentBtn" title="放映模式 (F)">▶ 放映</button>
 </header>
@@ -70,24 +69,18 @@ body.browse .slide { position: relative; margin-bottom: 24px; border-radius: 8px
 /* 进度条 / nav dots / 页码工具条 / 目录胶囊与侧边窗 */
 .deck-progress { position: fixed; top: 0; left: 0; width: 100%; height: 3px; z-index: 100; background: rgba(15,23,42,.08); }
 #progressBar { height: 100%; width: 0%; background: linear-gradient(90deg, var(--c-info), var(--c-exec)); transition: width .4s ease; }
-.nav-dots { position: fixed; right: 14px; top: 50%; transform: translateY(-50%); z-index: 100; display: flex; flex-direction: column; gap: 7px; }
-.nav-dot { width: 7px; height: 7px; border-radius: 50%; background: #b6bdc9; cursor: pointer; transition: all .3s ease; }
-.nav-dot.active { background: var(--c-exec); transform: scale(1.5); }
-.nav-dot:hover { background: var(--c-exec); }
-.deck-bar { position: fixed; top: 14px; right: 16px; z-index: 110; display: flex; align-items: center; gap: 10px;
+/* 单一 chrome 聚合（左上角）：☰ 目录 + 页码 + 放映；页级跳转由缩略图侧栏承担，不设 nav dots */
+.deck-bar { position: fixed; top: 14px; left: 16px; z-index: 110; display: flex; align-items: center; gap: 4px;
   background: rgba(255,255,255,.72); backdrop-filter: blur(12px); border: 1px solid rgba(226,232,240,.9);
-  border-radius: 999px; padding: 7px 9px 7px 16px; box-shadow: 0 4px 16px rgba(15,23,42,.08);
+  border-radius: 999px; padding: 6px 8px; box-shadow: 0 4px 16px rgba(15,23,42,.08);
   font-size: 13px; color: var(--text-sub, #64748b); transition: opacity .4s ease; }
-.deck-page { font-variant-numeric: tabular-nums; letter-spacing: .06em; }
+.deck-page { font-variant-numeric: tabular-nums; letter-spacing: .06em; padding: 0 6px; }
+.deck-menu { border: none; background: transparent; cursor: pointer; font-size: 15px; line-height: 1;
+  color: var(--text-sub, #64748b); padding: 4px 9px; border-radius: 999px; }
+.deck-menu:hover { background: rgba(37,99,235,.08); }
 .deck-present-btn { border: none; cursor: pointer; border-radius: 999px; padding: 6px 14px;
   background: var(--c-exec, #2563eb); color: #fff; font-size: 13px; font-weight: 600; }
 .deck-present-btn:hover { filter: brightness(1.08); }
-
-.deck-menu { position: fixed; top: 14px; left: 16px; z-index: 110; display: flex; align-items: center; gap: 8px;
-  background: rgba(255,255,255,.72); backdrop-filter: blur(12px); border: 1px solid rgba(226,232,240,.9);
-  border-radius: 999px; padding: 9px 16px; cursor: pointer; font-size: 13px; color: var(--text-sub, #64748b);
-  box-shadow: 0 4px 16px rgba(15,23,42,.08); transition: opacity .4s ease; font-variant-numeric: tabular-nums; }
-.deck-menu:hover { border-color: var(--c-info, #3b82f6); }
 .deck-sidebar { position: fixed; top: 0; left: 0; bottom: 0; z-index: 200; width: 320px;
   background: rgba(248,250,252,.97); backdrop-filter: blur(16px); border-right: 1px solid var(--border-card, #e2e8f0);
   transform: translateX(-100%); transition: transform .35s var(--ease-out-expo, cubic-bezier(.16,1,.3,1));
@@ -136,7 +129,7 @@ class DeckPlayer {
         this.wheelAcc = 0; this.wheelQuiet = null;
         this.hideTimer = null; this.rafId = null; this.scrollRaf = null;
         this.mx = -200; this.my = -200; this.cx = -200; this.cy = -200;
-        this.buildDots(); this.buildThumbs(); this.applyMode(); this.applyCurrent(0); this.syncChrome();
+        this.buildThumbs(); this.applyMode(); this.applyCurrent(0); this.syncChrome();
         addEventListener('resize', () => this.fit());
         this.bindKeys(); this.bindWheel(); this.bindScroll(); this.bindClick(); this.bindPresent(); this.bindCursor();
         document.getElementById('deckMenu')?.addEventListener('click', () => this.toggleToc());
@@ -176,21 +169,10 @@ class DeckPlayer {
         document.getElementById('deckPage').textContent = `${this.current + 1} / ${this.slides.length}`;
         const mp = document.getElementById('deckMenuPage');
         if (mp) mp.textContent = `${this.current + 1}/${this.slides.length}`;
-        this.dots?.forEach((d, k) => d.classList.toggle('active', k === this.current));
+        this.dots?.forEach((d, k) => d.classList.toggle('active', k === this.current));  // 旧 deck 兼容；新 chrome 无 dots
         this.thumbs?.forEach((t, k) => t.classList.toggle('active', k === this.current));
     }
 
-    buildDots() {
-        const nav = document.getElementById('navDots');
-        this.slides.forEach((s, i) => {
-            const d = document.createElement('div');
-            d.className = 'nav-dot';
-            d.title = s.dataset.label || `Slide ${i + 1}`;
-            d.addEventListener('click', () => this.show(i));
-            nav.appendChild(d);
-        });
-        this.dots = [...nav.children];
-    }
     /* 缩略图侧边窗：DOM 克隆 + CSS 缩放（288/1920 = 0.15），零依赖实时预览 */
     buildThumbs() {
         const wrap = document.getElementById('deckThumbs');
