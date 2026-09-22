@@ -3,7 +3,7 @@
 **每个 deck 必含。** 固定 1920×1080 画布缩放适配窗口，零滚动零 IO，换页是显式 `show(i)`。双模式：**浏览**（默认，带界面框架，reveal 全显供阅读）+ **放映**（全屏，reveal 节拍步进）。
 
 与工具的契约（measure_overflow / shot 会注入强制 CSS 并隐藏杂物）——**类名不可改**：
-`.deck-stage` / `.deck-fit` / `.deck-bar` / `.deck-progress` / `.nav-dots` / `.pres-cursor` / `.pres-cursor-hint` / `.player-hint`；页元素 `section.slide[data-label]`；渐显 `.reveal`；步进标记 `.shown`；放映态 `body.presenting`。
+`.deck-stage` / `.deck-fit` / `.deck-bar` / `.deck-menu` / `.deck-sidebar` / `.deck-progress` / `.nav-dots` / `.pres-cursor` / `.pres-cursor-hint` / `.player-hint`；页元素 `section.slide[data-label]`；渐显 `.reveal`；步进标记 `.shown`；放映态 `body.presenting`。
 
 ## HTML（固定结构）
 
@@ -17,10 +17,15 @@
 
 <div class="deck-progress"><div id="progressBar"></div></div>
 <nav class="nav-dots" id="navDots" aria-label="页面导航"></nav>
+<button class="deck-menu" id="deckMenu" title="页面目录"><span>☰</span><span id="deckMenuPage">1/6</span></button>
 <header class="deck-bar" id="deckBar">
   <span class="deck-page" id="deckPage">1 / 6</span>
   <button class="deck-present-btn" id="presentBtn" title="放映模式 (F)">▶ 放映</button>
 </header>
+<aside class="deck-sidebar" id="deckSidebar" aria-label="页面目录">
+  <div class="deck-sidebar-head"><span>页面目录</span><button class="deck-sidebar-close" id="tocClose" title="关闭 (Esc)">×</button></div>
+  <div class="deck-thumbs" id="deckThumbs"></div>
+</aside>
 <div class="pres-cursor" id="presCursor"><div class="pres-spotlight"></div><div class="pres-dot"></div></div>
 <div class="pres-cursor-hint" id="presCursorHint">按 P 开关演示光标</div>
 <div class="player-hint" id="playerHint">←→ 翻页 · F 放映 · P 聚光灯</div>
@@ -80,6 +85,45 @@ body.presenting .slide.current .reveal:not(.shown) { opacity: 0 !important; tran
 }
 .deck-present-btn:hover { filter: brightness(1.08); }
 
+/* 左上角目录胶囊 + 缩略图侧边窗 */
+.deck-menu {
+    position: fixed; top: 14px; left: 16px; z-index: 110;
+    display: flex; align-items: center; gap: 8px;
+    background: rgba(255,255,255,.72); backdrop-filter: blur(12px);
+    border: 1px solid rgba(226,232,240,.9); border-radius: 999px; padding: 9px 16px;
+    cursor: pointer; font-size: 13px; color: var(--text-sub, #64748b);
+    box-shadow: 0 4px 16px rgba(15,23,42,.08); transition: opacity .4s ease;
+    font-variant-numeric: tabular-nums;
+}
+.deck-menu:hover { border-color: var(--c-info, #3b82f6); }
+.deck-sidebar {
+    position: fixed; top: 0; left: 0; bottom: 0; z-index: 200; width: 320px;
+    background: rgba(248,250,252,.97); backdrop-filter: blur(16px);
+    border-right: 1px solid var(--border-card, #e2e8f0);
+    transform: translateX(-100%); transition: transform .35s var(--ease-out-expo, cubic-bezier(.16,1,.3,1));
+    display: flex; flex-direction: column;
+}
+.deck-sidebar.open { transform: none; box-shadow: 24px 0 64px rgba(15,23,42,.15); }
+.deck-sidebar-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 20px; font-size: 15px; font-weight: 700; color: var(--text, #1e293b);
+    border-bottom: 1px solid var(--border-card, #e2e8f0);
+}
+.deck-sidebar-close { border: none; background: none; font-size: 20px; cursor: pointer; color: var(--text-faint, #94a3b8); line-height: 1; }
+.deck-thumbs { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+.thumb-item { cursor: pointer; border: 2px solid transparent; border-radius: 10px; }
+.thumb-item.active { border-color: var(--c-exec, #2563eb); }
+.thumb-box { width: 100%; height: 162px; overflow: hidden; border-radius: 8px; border: 1px solid var(--border-card, #e2e8f0); position: relative; background: #fff; }
+.thumb-inner { width: 1920px; height: 1080px; transform: scale(0.15); transform-origin: top left; position: relative; }
+/* 克隆页脱离 .slide 契约类（防工具/引擎误伤），样式自足且强制最终态 */
+.thumb-page { position: absolute !important; inset: 0 !important; width: 1920px !important; height: 1080px !important;
+    display: flex !important; flex-direction: column; padding: 56px 90px !important;
+    visibility: visible !important; opacity: 1 !important; background: #fff; overflow: hidden; }
+.thumb-page.cover { padding: 108px 130px !important; }
+.thumb-page .reveal { opacity: 1 !important; transform: none !important; }
+.thumb-label { font-size: 12px; color: var(--text-sub, #64748b); padding: 6px 4px; }
+body.presenting .deck-menu, body.presenting .deck-sidebar { opacity: 0; pointer-events: none; }
+
 /* 聚光灯光标与提示 chip（同前版，略）：
    .pres-cursor/.pres-spotlight/.pres-dot/.pres-cursor-hint/.player-hint 样式见上一版实现，不变 */
 
@@ -101,9 +145,11 @@ class DeckPlayer {
         this.slides = [...this.fitEl.querySelectorAll('section.slide')];
         this.current = 0; this.presenting = false; this.cursorOn = false;
         this.wheelAcc = 0; this.wheelQuiet = null;
-        this.buildDots(); this.fit(); this.show(0);
+        this.buildDots(); this.buildThumbs(); this.fit(); this.show(0);
         addEventListener('resize', () => this.fit());
         this.bindKeys(); this.bindWheel(); this.bindClick(); this.bindPresent(); this.bindCursor();
+        document.getElementById('deckMenu')?.addEventListener('click', () => this.toggleToc());
+        document.getElementById('tocClose')?.addEventListener('click', () => this.closeToc());
         this.flashHint('playerHint', '←→ 翻页 · F 放映 · P 聚光灯', 4000);
     }
 
@@ -125,6 +171,42 @@ class DeckPlayer {
         this.dots = [...nav.children];
     }
 
+    /* 缩略图侧边窗：DOM 克隆 + CSS 缩放（288/1920 = 0.15），零依赖实时预览 */
+    buildThumbs() {
+        const wrap = document.getElementById('deckThumbs');
+        if (!wrap) return;
+        this.thumbs = this.slides.map((s, i) => {
+            const item = document.createElement('div');
+            item.className = 'thumb-item';
+            const clone = s.cloneNode(true);
+            clone.classList.remove('slide');           // 脱离 .slide 契约选择器，防工具/引擎误伤
+            clone.classList.add('thumb-page');
+            clone.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
+            const box = document.createElement('div');
+            box.className = 'thumb-box';
+            const inner = document.createElement('div');
+            inner.className = 'thumb-inner';
+            inner.appendChild(clone);
+            box.appendChild(inner);
+            const label = document.createElement('div');
+            label.className = 'thumb-label';
+            label.textContent = `${i + 1}. ${s.dataset.label || ''}`;
+            item.append(box, label);
+            item.addEventListener('click', () => { this.show(i); this.closeToc(); });
+            wrap.appendChild(item);
+            return item;
+        });
+    }
+    toggleToc() {
+        const sb = document.getElementById('deckSidebar');
+        if (!sb) return;
+        sb.classList.toggle('open');
+        const active = this.thumbs?.[this.current];
+        if (sb.classList.contains('open') && active) active.scrollIntoView({ block: 'nearest' });
+        this.thumbs?.forEach((t, k) => t.classList.toggle('active', k === this.current));
+    }
+    closeToc() { document.getElementById('deckSidebar')?.classList.remove('open'); }
+
     show(i) {
         i = Math.max(0, Math.min(this.slides.length - 1, i));
         this.slides[this.current].classList.remove('current');
@@ -134,7 +216,10 @@ class DeckPlayer {
         if (this.presenting) s.querySelectorAll('.shown').forEach(e => e.classList.remove('shown')); // 进页重走节拍
         document.getElementById('progressBar').style.width = ((i + 1) / this.slides.length * 100) + '%';
         document.getElementById('deckPage').textContent = `${i + 1} / ${this.slides.length}`;
+        const mp = document.getElementById('deckMenuPage');
+        if (mp) mp.textContent = `${i + 1}/${this.slides.length}`;
         this.dots.forEach((d, k) => d.classList.toggle('active', k === i));
+        this.thumbs?.forEach((t, k) => t.classList.toggle('active', k === i));
     }
 
     /* 放映模式：reveal 步进；浏览模式：直接翻页 */
@@ -156,6 +241,7 @@ class DeckPlayer {
     bindKeys() {
         document.addEventListener('keydown', e => {
             if (/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+            if (e.key === 'Escape') { this.closeToc(); return; }
             if (e.key === 'f' || e.key === 'F') { this.togglePresent(); return; }
             if (e.key === 'p' || e.key === 'P') { this.toggleCursor(); return; }
             if (['ArrowRight','ArrowDown','PageDown',' '].includes(e.key)) { e.preventDefault(); this.step(); }
@@ -230,4 +316,5 @@ new DeckPlayer();
 - **滚轮被 preventDefault 接管**为逐页手势——这是"像 PPT"的关键；缩放类 Ctrl/Cmd+滚轮放行给浏览器。
 - **放映进页清空 `.shown`**（重走节拍）；浏览模式 reveal 全显（阅读模式）。
 - **全屏被拒时降级**为纯放映 chrome（iframe 嵌入、无手势调用场景仍可用）。
-- 工具侧契约：measure_overflow / shot 注入强制 CSS（stage 静态化 + fit 取缩放 + 页全显），见脚本内注释。
+- **缩略图 = DOM 克隆**（`cloneNode` 后去掉 `.slide` 类、剥掉全部 id，加 `.thumb-page` 自足样式 + reveal 强制最终态）——克隆不匹配 `section.slide` 契约选择器，门禁/e2e/引擎都不会误伤；胶囊页码与 thumb 高亮在 `show()` 统一同步；Esc 关侧栏。
+- 工具侧契约：measure_overflow / shot 注入强制 CSS（stage 静态化 + fit 取缩放 + 页全显 + chrome 隐藏），见脚本内注释。

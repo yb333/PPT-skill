@@ -94,6 +94,32 @@ try {
   st = await state();
   ok(!st.presenting, 'F 退出放映态');
 
+  // —— 缩略图侧边窗（存在才测）——
+  const hasToc = await page.evaluate(() => !!document.getElementById('deckMenu'));
+  if (hasToc) {
+    console.log('== 缩略图侧边窗 ==');
+    await page.click('#deckMenu');
+    await page.waitForTimeout(500);
+    const toc = await page.evaluate(() => {
+      const sb = document.getElementById('deckSidebar');
+      return { open: sb.classList.contains('open'),
+               items: sb.querySelectorAll('.thumb-item').length,
+               clones: sb.querySelectorAll('.thumb-page').length };
+    });
+    ok(toc.open, '点胶囊打开侧栏');
+    ok(toc.items === s0.total && toc.clones === s0.total, `缩略图数 = 页数（${toc.items}/${toc.clones} vs ${s0.total}）`);
+    await page.evaluate(() => document.querySelectorAll('#deckThumbs .thumb-item')[0].click());
+    await page.waitForTimeout(500);
+    st = await state();
+    ok(st.current === 0, `点缩略图跳页（current=${st.current}）`);
+    ok(await page.evaluate(() => !document.getElementById('deckSidebar').classList.contains('open')), '跳页后侧栏自动关闭');
+    await page.click('#deckMenu');
+    await page.waitForTimeout(400);
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(400);
+    ok(await page.evaluate(() => !document.getElementById('deckSidebar').classList.contains('open')), 'Esc 关闭侧栏');
+  }
+
   if (errors.length) {
     ok(false, `页面 JS 错误 ${errors.length} 条：${errors.slice(0, 3).join(' | ')}`);
   } else {

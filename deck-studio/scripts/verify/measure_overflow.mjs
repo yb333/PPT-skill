@@ -50,7 +50,7 @@ try {
     .deck-fit{transform:none!important;width:1920px!important;height:auto!important;box-shadow:none!important;}
     section.slide{position:relative!important;inset:auto!important;visibility:visible!important;opacity:1!important;display:flex!important;}
     /* 播放器杂物隐藏 */
-    .deck-bar,.deck-progress,.nav-dots,.pres-cursor,.pres-cursor-hint,.player-hint,.keyboard-hint{display:none!important;}
+    .deck-bar,.deck-menu,.deck-sidebar,.deck-progress,.nav-dots,.pres-cursor,.pres-cursor-hint,.player-hint,.keyboard-hint{display:none!important;}
     /* reveal 强显：测量必须反映最终态，防止隐藏态漏测 */
     .reveal,.reveal-scale,.reveal-left,.reveal-blur{opacity:1!important;transform:none!important;filter:none!important;transition:none!important;}
     .slide .reveal:not(.shown){opacity:1!important;}

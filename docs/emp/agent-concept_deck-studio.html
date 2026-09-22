@@ -92,6 +92,32 @@ body.presenting .deck-bar, body.presenting .nav-dots, body.presenting .deck-prog
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .2s !important; }
 }
+
+/* 左上角目录胶囊 + 缩略图侧边窗 */
+.deck-menu { position: fixed; top: 14px; left: 16px; z-index: 110; display: flex; align-items: center; gap: 8px;
+    background: rgba(255,255,255,.72); backdrop-filter: blur(12px); border: 1px solid rgba(226,232,240,.9);
+    border-radius: 999px; padding: 9px 16px; cursor: pointer; font-size: 13px; color: var(--text-sub);
+    box-shadow: 0 4px 16px rgba(15,23,42,.08); transition: opacity .4s ease; font-variant-numeric: tabular-nums; }
+.deck-menu:hover { border-color: var(--c-info); }
+.deck-sidebar { position: fixed; top: 0; left: 0; bottom: 0; z-index: 200; width: 320px;
+    background: rgba(248,250,252,.97); backdrop-filter: blur(16px); border-right: 1px solid var(--border-card);
+    transform: translateX(-100%); transition: transform .35s var(--ease-out-expo);
+    display: flex; flex-direction: column; }
+.deck-sidebar.open { transform: none; box-shadow: 24px 0 64px rgba(15,23,42,.15); }
+.deck-sidebar-head { display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 20px; font-size: 15px; font-weight: 700; color: var(--text); border-bottom: 1px solid var(--border-card); }
+.deck-sidebar-close { border: none; background: none; font-size: 20px; cursor: pointer; color: var(--text-faint); line-height: 1; }
+.deck-thumbs { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+.thumb-item { cursor: pointer; border: 2px solid transparent; border-radius: 10px; }
+.thumb-item.active { border-color: var(--c-exec); }
+.thumb-box { width: 100%; height: 162px; overflow: hidden; border-radius: 8px; border: 1px solid var(--border-card); position: relative; background: #fff; }
+.thumb-inner { width: 1920px; height: 1080px; transform: scale(0.15); transform-origin: top left; position: relative; }
+.thumb-page { position: absolute !important; inset: 0 !important; width: 1920px !important; height: 1080px !important;
+    display: flex !important; flex-direction: column; padding: 56px 90px !important;
+    visibility: visible !important; opacity: 1 !important; background: #fff; overflow: hidden; }
+.thumb-page.cover { padding: 108px 130px !important; }
+.thumb-page .reveal { opacity: 1 !important; transform: none !important; }
+.thumb-label { font-size: 12px; color: var(--text-sub); padding: 6px 4px; }
 </style>
 </head>
 <body>
@@ -727,6 +753,11 @@ body.presenting .deck-bar, body.presenting .nav-dots, body.presenting .deck-prog
 <nav class="nav-dots" id="navDots" aria-label="页面导航"></nav>
 <header class="deck-bar"><span class="deck-page" id="deckPage">1 / 6</span>
     <button class="deck-present-btn" id="presentBtn" title="放映模式 (F)">▶ 放映</button></header>
+<button class="deck-menu" id="deckMenu" title="页面目录"><span>☰</span><span id="deckMenuPage">1/6</span></button>
+<aside class="deck-sidebar" id="deckSidebar" aria-label="页面目录">
+    <div class="deck-sidebar-head"><span>页面目录</span><button class="deck-sidebar-close" id="tocClose" title="关闭 (Esc)">×</button></div>
+    <div class="deck-thumbs" id="deckThumbs"></div>
+</aside>
 <div class="pres-cursor" id="presCursor">
     <div class="pres-spotlight"></div>
     <div class="pres-dot"></div>
@@ -743,9 +774,11 @@ class DeckPlayer {
         this.wheelAcc = 0; this.wheelQuiet = null;
         this.hideTimer = null; this.rafId = null;
         this.mx = -200; this.my = -200; this.cx = -200; this.cy = -200;
-        this.buildDots(); this.fit(); this.show(0);
+        this.buildDots(); this.buildThumbs(); this.fit(); this.show(0);
         addEventListener('resize', () => this.fit());
         this.bindKeys(); this.bindWheel(); this.bindClick(); this.bindPresent(); this.bindCursor();
+        document.getElementById('deckMenu').addEventListener('click', () => this.toggleToc());
+        document.getElementById('tocClose').addEventListener('click', () => this.closeToc());
         this.flashHint('playerHint', '←→ 翻页 · F 放映 · P 聚光灯', 4000);
     }
     fit() { this.fitEl.style.transform = `scale(${Math.min(innerWidth / 1920, innerHeight / 1080)})`; }
@@ -759,6 +792,37 @@ class DeckPlayer {
         });
         this.dots = [...nav.children];
     }
+    buildThumbs() {
+        const wrap = document.getElementById('deckThumbs');
+        this.thumbs = this.slides.map((s, i) => {
+            const item = document.createElement('div');
+            item.className = 'thumb-item';
+            const clone = s.cloneNode(true);
+            clone.classList.remove('slide');
+            clone.classList.add('thumb-page');
+            clone.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
+            const box = document.createElement('div');
+            box.className = 'thumb-box';
+            const inner = document.createElement('div');
+            inner.className = 'thumb-inner';
+            inner.appendChild(clone);
+            box.appendChild(inner);
+            const label = document.createElement('div');
+            label.className = 'thumb-label';
+            label.textContent = `${i + 1}. ${s.dataset.label || ''}`;
+            item.append(box, label);
+            item.addEventListener('click', () => { this.show(i); this.closeToc(); });
+            wrap.appendChild(item);
+            return item;
+        });
+    }
+    toggleToc() {
+        const sb = document.getElementById('deckSidebar');
+        sb.classList.toggle('open');
+        if (sb.classList.contains('open')) this.thumbs[this.current]?.scrollIntoView({ block: 'nearest' });
+        this.thumbs.forEach((t, k) => t.classList.toggle('active', k === this.current));
+    }
+    closeToc() { document.getElementById('deckSidebar').classList.remove('open'); }
     show(i) {
         i = Math.max(0, Math.min(this.slides.length - 1, i));
         this.slides[this.current].classList.remove('current');
@@ -768,7 +832,9 @@ class DeckPlayer {
         if (this.presenting) s.querySelectorAll('.shown').forEach(e => e.classList.remove('shown'));
         document.getElementById('progressBar').style.width = ((i + 1) / this.slides.length * 100) + '%';
         document.getElementById('deckPage').textContent = `${i + 1} / ${this.slides.length}`;
+        document.getElementById('deckMenuPage').textContent = `${i + 1}/${this.slides.length}`;
         this.dots.forEach((d, k) => d.classList.toggle('active', k === i));
+        this.thumbs?.forEach((t, k) => t.classList.toggle('active', k === i));
     }
     step() {
         if (this.presenting) {
@@ -787,6 +853,7 @@ class DeckPlayer {
     bindKeys() {
         document.addEventListener('keydown', e => {
             if (/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+            if (e.key === 'Escape') { this.closeToc(); return; }
             if (e.key === 'f' || e.key === 'F') { this.togglePresent(); return; }
             if (e.key === 'p' || e.key === 'P') { this.toggleCursor(); return; }
             if (['ArrowRight','ArrowDown','PageDown',' '].includes(e.key)) { e.preventDefault(); this.step(); }
