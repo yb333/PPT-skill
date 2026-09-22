@@ -50,7 +50,7 @@ frontend-slides 的融合重构后继（研发仓：`/Users/yuanbo/frontend-slid
 
 ## Phase 2: Design Spec（内容&视觉细化）
 
-把大纲细化到可一次成型生成：每页的区块占比、SVG 关键参数（viewBox/元素坐标/配色 token）、完整文本（精确到每个 label）、**编排层动画声明**（元素+时机+效果，选自动画词表；通用层 reveal 无需声明，默认全带）。
+把大纲细化到可一次成型生成：每页的区块占比、SVG 关键参数（viewBox/元素坐标/配色 token）、完整文本（精确到每个 label）、**动画申报**（按 animation.md 三判据：默认零动画，申报处写明机制+元素+语义理由）。
 
 - ⏸️ **闸门：用户确认 spec 后才进代码生成**。确认重点：SVG 参数合理、文本完整、色彩层正确、动画声明克制（编排层只在确有必要时用）。
 
@@ -115,7 +115,7 @@ python3 ~/.zcode/skills/deck-studio/scripts/html2pptx/convert.py <deck.html> <ou
 | `references/layout.md` | Phase 4 —— 固定画布排版刻度、卡片语汇、密度、审美硬要求 |
 | `references/player.md` | Phase 4 —— 舞台引擎（浏览=无缝长页 / 放映=节拍步进、缩略图侧栏、聚光灯）标准实现 |
 | `references/svg-diagrams.md` | Phase 4 —— 架构图/流程图/图表规范与模板 |
-| `references/animation.md` | Phase 4 —— 动画两层策略与词表 |
+| `references/animation.md` | Phase 2/4 —— 动画申报制：默认零动画、七机制词表、DECK_STEPS 声明格式 |
 | `references/copywriting.md` | Phase 1/2/4 —— 文案规范（中文、标题句式、数字） |
 
 ## 常见故障

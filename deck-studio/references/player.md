@@ -388,3 +388,29 @@ new DeckPlayer();
 - **缩略图 = DOM 克隆**（去 `.slide` 类、剥 id、`.thumb-page` 自足样式 + reveal 强制最终态）；点缩略图跳页**不关侧栏**（连续预览），点击侧栏外任意区域、Esc 或 × 关闭。
 - **侧栏点外即关的 return 语义**：关侧栏的那次点击不再推进页/节拍——一次点击只做一件事。
 - **工具侧契约**：measure_overflow / shot 注入强制 CSS（stage 静态化 + fit 取缩放与 margin + 页全显 + chrome 隐藏），见脚本内注释。
+
+## 动画步进程序（DECK_STEPS，可选；申报格式与判据见 animation.md）
+
+放映态 `step()` 顶部优先调用步进程序，无申报回退 reveal 步进：
+
+```js
+step() {
+    if (this.presenting) {
+        if (this.programStep && this.programStep()) return;  // 申报程序优先
+        ...legacy reveal 步进...
+    }
+}
+```
+
+页面在脚本内声明 `window.DECK_STEPS = { '页label': [动作, ...] }`，动作一元组：
+
+| 动作 | 格式 | 语义 |
+|------|------|------|
+| 巡游 `t` | `['t', [micro,...]]` | 自动连播微指令；`['gate', x, y]` 处暂停（琥珀圆环呼吸 + "单击确认"），点击继续；巡游中点击 = 快进 |
+| 微指令 | `['veil', [x,y,w,h]]` / `['lit', rect]` / `['state', rect]` / `['move', x1,y1,x2,y2, ms]` / `['move2', ...]` 双光点汇合 / `['back', ...]` 反向红流 / `['pulse', rect]` | veil=背景退隐；lit=点亮；state=状态变色 overlay；move=流转脉冲 |
+| 走查 `w` | `['w', rect, rect2?]` | 点亮当前区域（多区域=联动），上一次自动退回 |
+| 脉冲 | `['pulse', rect]` | 一次性点名，播完即逝 |
+
+fx 全部画在运行时 `<g class="fx-layer">`（追加到当前页 svg 内，viewBox 坐标随画布缩放）：`.fx-veil`（退隐白幕）/`.fx-lit`（点亮）/`.fx-state`（状态）/`.fx-gate`（闸口呼吸环）/`.fx-pulse`（一次性脉冲）。fx CSS 与完整参考实现见研发仓 `docs/emp/agent-concept_deck-studio.html`。
+
+**工程不变式**：① 终态 = 静态整页——巡游结束 fx 层清空即还原，门禁/截图/缩略图/导出零适配；② 讲者主权——移动中点击快进、闸口点击=确认、reduced-motion 直达终态；③ 引擎暴露 `window.__deck`（`busy`/`pi`/`tourWait`）供 e2e 确定性等待；④ 命名警告：fx 元素缓存属性勿与方法同名（`fxToken` 属性/方法冲突曾致巡游卡死，已改 `newToken()`）。

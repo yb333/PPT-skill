@@ -1,95 +1,84 @@
-# animation.md — 动画两层策略与词表
+# animation.md — 动画申报制：默认零动画，七个机制词表（决策 D6 修订版）
 
-## 两层策略（宪法 3 + 决策 D6）
+## 哲学：动画是叙事工具，不是装饰
 
-| 层 | 内容 | 成本 | 何时呈现 |
-|----|------|------|---------|
-| **通用层** | reveal 入场、页面过渡、聚光灯、进度条等标准件 | ≈0（同一套 CSS/JS 复用） | **每次迭代全量带上**，讨论所见即所得 |
-| **编排层** | 逐元素时序、SVG 分步绘制、滚动联动等定制动画 | 贵在内容迭代时的联动返工 | Design Spec 显式声明（元素+时机+效果）；**内容结构冻结后一次成型**；迭代期不重做，除非结构变更 |
+动画的全部价值 = 把"讲者的叙述节奏"和"观众的视觉注意"对齐。四个正当用途：**引导注意、信息分块、表达过程、方位连续**。除此之外的一切动画都是冗余。
 
-编排层声明格式（写进 Phase 2 spec）：
+**默认形态 = 完全静态、整页一次呈现。** 要动画，必须在 Design Spec 申报，且每处能回答三判据之一：
 
-```markdown
-### 编排动画
-- 元素: 漏斗图 5 层矩形 | 时机: 进入本页后逐层 | 效果: 自上而下依次显示（间隔 0.4s，reveal-scale）
-- 元素: 箭头连线 | 时机: 层全部显示后 | 效果: stroke-dashoffset 划入
-```
+1. 出现时机是否承载讲者的叙述节奏？（分块）
+2. 讲到它时是否需要把注意力拉过来？（引导）
+3. 它是否表达静态图表达不了的过程/变化？（过程）
 
-规则：动画按"知识节拍"成组纳入同一 step，不做零散点缀；场景用量参考 process.md 场景适配表（汇报少用、自读基本不用、授课按讲课节拍）。
+答不上来 → 不做。**永不动画**：页标题、eyebrow、页脚、chrome、背景装饰、附录/自读内容。
 
-## 通用层词表（entrance）
+## 语义参数（动画参数就是语义参数）
 
-```css
-.reveal {          /* 淡入上移（默认款） */
-    opacity: 0;
-    transform: translateY(30px);
-    transition: opacity 0.6s var(--ease-out-expo),
-                transform 0.6s var(--ease-out-expo);
-}
-.slide.visible .reveal { opacity: 1; transform: translateY(0); }
-/* 逐个错峰 */
-.reveal:nth-child(1) { transition-delay: 0.1s; }
-.reveal:nth-child(2) { transition-delay: 0.2s; }
-.reveal:nth-child(3) { transition-delay: 0.3s; }
-.reveal:nth-child(4) { transition-delay: 0.4s; }
-
-.reveal-scale {    /* 缩放入场 */
-    opacity: 0; transform: scale(0.9);
-    transition: opacity 0.6s, transform 0.6s var(--ease-out-expo);
-}
-.reveal-left {     /* 左滑入场 */
-    opacity: 0; transform: translateX(-50px);
-    transition: opacity 0.6s, transform 0.6s var(--ease-out-expo);
-}
-.reveal-blur {     /* 模糊聚焦入场 */
-    opacity: 0; filter: blur(10px);
-    transition: opacity 0.8s, filter 0.8s var(--ease-out-expo);
-}
-.slide.visible .reveal-scale,
-.slide.visible .reveal-left,
-.slide.visible .reveal-blur { opacity: 1; transform: none; filter: none; }
-```
-
-缓动 token：`:root { --ease-out-expo: cubic-bezier(0.16,1,0.3,1); --duration-normal: 0.6s; }`
-
-**契约提醒**：渐显类一律挂 `.reveal` 系类名 + `.slide.visible` 触发模式——验证与导出工具按此强显（导出取最终态快照，动画自由不受限）。
-
-## 背景效果
-
-```css
-.gradient-bg {   /* 渐变网格 */
-    background:
-        radial-gradient(ellipse at 20% 80%, rgba(59,130,246,.25) 0%, transparent 50%),
-        radial-gradient(ellipse at 80% 20%, rgba(37,99,235,.15) 0%, transparent 50%),
-        var(--bg-page, #ffffff);
-}
-.grid-bg {       /* 网格纹理 */
-    background-image:
-        linear-gradient(rgba(30,41,59,.04) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(30,41,59,.04) 1px, transparent 1px);
-    background-size: 50px 50px;
-}
-```
-
-（默认蓝板用上面 token 化颜色；预设场景按预设 token 现场调。）
-
-## 交互效果（可选增强）
-
-3D tilt 悬停（perspective + rotateX/Y 随鼠标位置）、磁性按钮、数字滚动计数、自定义光标拖尾。只在风格确需时加；移动端 768px 断点禁用重效果。
-
-## Effect → Feeling 映射（选效果先定情绪）
-
-| 情绪 | 手法 |
+| 参数 | 语义 |
 |------|------|
-| Dramatic/Cinematic | 慢淡入（1–1.5s）、大缩放（0.9→1）、暗底聚光、视差、全幅图 |
-| Techy/Futuristic | 霓虹辉光（box-shadow 强调色）、粒子 canvas、网格纹、等宽字体点缀、故障/乱序字 |
-| Playful/Friendly | 弹簧缓动、大圆角、亮色/粉彩、浮动 bobbing |
-| Professional/Corporate | 快而克制（200–300ms）、干净无衬线、精确对齐、少装饰、数据可视化主角 |
-| Calm/Minimal | 极慢极微动、高留白、低饱和、衬线、内容为主 |
-| Editorial/Magazine | 强字阶对比、pull quote、图文互嵌、破格网格、黑白 + 单强调色 |
+| 正向流动 | 自动执行、推进 |
+| 反向流动 | 退回、重做、失败路径 |
+| 停顿 | 等人（闸口）、等待决策 |
+| 同时出现 | 并行 |
+| 变色/状态 overlay | 状态迁移、达标、阻塞 |
+| 一次性脉冲 | 点名注意（只此一次，绝不循环） |
 
-## 性能与可访问性
+## 七机制词表
 
-- 动画只用 `transform` / `opacity`（合成层友好）；`will-change` 少用；scroll/mousemove 节流
-- `@media (prefers-reduced-motion: reduce)` 全 deck 必含（见 layout.md 基建）
-- 移动端：768px 断点降级/禁用粒子与重效果
+| 机制 | 类型 | 适用 | 案例（数据交付 Agent deck） |
+|------|------|------|------|
+| `t` 巡游 | 流转+状态 | 流程/机制/回路页——把核心论点演出来 | 流水线贯通+闸口停顿；螺旋回路+判定分叉 |
+| `w` 走查高亮 | 状态 | 密集表格/矩阵/静态大图——**常驻不藏**，讲到哪点亮哪（支持多区域联动：清单↔图） | 平台协同表逐行；能力矩阵逐行；三个接点清单↔回路图 |
+| `c` 分块步进 | 出现 | 并列论元按完整论断逐个出（一张卡/一个论断 = 一次点击，拒绝逐条小装饰） | 三条红线 ×3 |
+| `seq` 自动连播 | 出现 | 不需互动的快速序列，总时长 ≤1.2s，点击瞬间完成 | 列扫描 |
+| `pulse` 一次性脉冲 | 引导 | 点名阻塞项/风险格，只此一次 | ⚡阻塞项红格 |
+| 状态变更（`state` overlay / 变色） | 状态 | 达标、迁移、对比 | 代码稳定浅→深蓝 |
+| 数字 count-up | 状态 | 数字本身是论点时才用（罕见） | — |
+
+## 预算与时值
+
+- **每页至多一个旗舰动画**（巡游/合流这类），旗舰 = 把本页核心论点演出来的那一个；
+- **步数预算**：一页 0–3 步常态，硬上限 5（含旗舰内部的闸门停顿）；超限 → 拆页或改走查（藏显是下策，引导是上策）；
+- **时值**：移动/入场 300–650ms（ease-out）；走查停留 ≥120ms；连播总长 ≤1.2s；整页放完 ≤3s；
+- **场景差异**：授课按讲课节拍充分用；汇报页均 ≤1 步；自读全 deck 零动画；
+- **架构红利**：浏览模式永远全显静态（阅读零摩擦），动画只存在于放映态。
+
+## 申报格式（DECK_STEPS）
+
+动画以**声明式步进程序**写死在页内（引擎在放映态逐项执行；终态 = 静态整页，见下）：
+
+```html
+<script>
+window.DECK_STEPS = {
+  '形态': [
+    ['t', [                                  // 巡游：自动连播微指令，gate 处暂停等点击
+      ['veil', [25,15,990,250]],             //   淡出遮罩（背景退隐，内容点亮其上）
+      ['lit',  [30,30,270,34]],              //   点亮区域（viewBox 坐标）
+      ['move', 155,47, 485,47, 650],         //   光点沿直线飞行（x1,y1→x2,y2, ms）
+      ['gate', 177,66],                      //   闸口：暂停，点击确认后继续（消耗一次点击）
+      ['back', 270,139, 105,74, 550],        //   反向红色流动（回改语义）
+      ['state', [210,228,120,32]],           //   状态变色 overlay（达标/迁移）
+    ]],
+    ['w', [28,324,362,32]],                  // 走查：点亮该区域，上次走查自动退回
+    ['w', [530,250,466,18], [188,56,86,40]], // 联动走查：多区域同亮（清单+图）
+    ['pulse', [718,434,294,36]],             // 一次性脉冲
+  ],
+};
+</script>
+```
+
+坐标一律用所在 SVG 的 **viewBox 坐标**（fx 层画在 svg 内部，随画布缩放）。效果全部是 **overlay**（遮罩/高亮/光点画在 fx 层），**不改原始像素、不给元素打 id**——终态清空 fx 层即回到静态整页。
+
+## 工程不变式（与工具链的和平共处条款）
+
+1. **终态不变式**：任何动画演完 = 静态整页；fx 层清空即还原。门禁/截图/缩略图/导出只见终态，零适配；
+2. **讲者主权**：动画进行中点击 = 瞬间快进到该动画终态；闸口停顿的点击 = 确认继续（语义性消费）；`prefers-reduced-motion` 直接呈现终态；
+3. **点elling 一次只做一件事**：闸口确认的那次点击不翻页；跳过动画的那次点击不步进；
+4. **声明式**：动画是数据（DECK_STEPS），不是散落 JS——与 AICO data-step 语义同构，为导出逐拍留接口。
+
+## 实现要点（player.md 引擎）
+
+- 放映态 `step()` 优先调用 `programStep()`：有申报则消费一个动作（巡游内部 gate 消耗点击、移动中点击=快进），无申报回退 legacy reveal 步进；
+- fx 层 = 运行时 `<g class="fx-layer">` 追加到当前页 svg 末尾，veil/glow/token 均为运行时节点；
+- 引擎暴露 `window.__deck`（busy/状态）供 e2e 等工具确定性等待；
+- 性能：动画只用 transform/opacity/rAF，单一 token 移动在合成层内完成。

@@ -152,6 +152,15 @@ body.presenting { cursor: pointer; }
 body.presenting .deck-bar, body.presenting .deck-menu,
 body.presenting .deck-progress, body.presenting .deck-sidebar { opacity: 0; pointer-events: none; }
 
+/* ===== 动画步进程序 fx 层（终态清空即还原静态页） ===== */
+.fx-layer .fx-veil { fill: #fff; opacity: 0; transition: opacity .45s ease; }
+.fx-layer .fx-veil.on { opacity: .78; }
+.fx-layer .fx-lit { fill: rgba(59,130,246,.3); stroke: rgba(37,99,235,.9); stroke-width: 1.6; }
+.fx-layer .fx-state { fill: rgba(29,78,216,.18); stroke: #1d4ed8; stroke-width: 2; }
+.fx-layer .fx-gate { fill: none; stroke: #f59e0b; stroke-width: 3; animation: fxgate 1s ease-in-out infinite; }
+@keyframes fxgate { 0%,100% { opacity: .3; } 50% { opacity: 1; } }
+.fx-layer .fx-pulse { fill: rgba(239,68,68,.16); stroke: #ef4444; stroke-width: 2; animation: fxpulse .9s ease-out 1 forwards; }
+@keyframes fxpulse { 0% { opacity: .85; } 100% { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .2s !important; }
 }
@@ -164,9 +173,9 @@ body.presenting .deck-progress, body.presenting .deck-sidebar { opacity: 0; poin
 <!-- ============ 封面 ============ -->
 <section class="slide cover" data-label="封面">
     <div class="slide-content" style="justify-content:center;">
-        <div class="tag reveal">设计开发阶段 · 人机交互与协同</div>
-        <h1 class="reveal">数据交付 Agent<br><span class="accent">设计开发阶段：方案与架构</span></h1>
-        <p class="sub reveal">Agent 自己跑流水线，人只在闸口拍板——<br>从 RS+US 到五件套制品（DDL/术加/调度/DQ/集成），<span class="key">一段流程、一份 spec、两个闸口</span>。</p>
+        <div class="tag">设计开发阶段 · 人机交互与协同</div>
+        <h1>数据交付 Agent<br><span class="accent">设计开发阶段：方案与架构</span></h1>
+        <p class="sub">Agent 自己跑流水线，人只在闸口拍板——<br>从 RS+US 到五件套制品（DDL/术加/调度/DQ/集成），<span class="key">一段流程、一份 spec、两个闸口</span>。</p>
     </div>
     <div class="meta"><span>主题：设计开发的人机交互 · 展开讲协同与场景</span><span>2026</span></div>
 </section>
@@ -174,12 +183,12 @@ body.presenting .deck-progress, body.presenting .deck-sidebar { opacity: 0; poin
 <!-- ============ 形态 ============ -->
 <section class="slide" data-label="形态">
     <div class="slide-content">
-        <div class="page-head reveal">
+        <div class="page-head">
             <div class="page-num">01 / 形态</div>
             <div class="page-title">形态：一条<span class="key">流水线</span>，人在闸口决策</div>
             <div class="page-claim">吃 RS+US（需求spec+用户故事），吐五件套制品（DDL/术加/调度/DQ/集成）。UT 是收尾工序，代码稳定后交付下游。</div>
         </div>
-        <div class="svg-stage reveal">
+        <div class="svg-stage">
         <svg viewBox="0 0 1040 500" xmlns="http://www.w3.org/2000/svg" font-family="PingFang SC,Microsoft YaHei,sans-serif">
             <defs>
                 <marker id="n1a" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto"><polygon points="0 0,9 3.5,0 7" fill="#2563eb"/></marker>
@@ -317,12 +326,12 @@ body.presenting .deck-progress, body.presenting .deck-sidebar { opacity: 0; poin
 <!-- ============ 场景 ============ -->
 <section class="slide" data-label="场景">
     <div class="slide-content">
-        <div class="page-head reveal">
+        <div class="page-head">
             <div class="page-num">02 / 场景</div>
             <div class="page-title">场景：新建与优化，<span class="key">共用一条主干</span></div>
             <div class="page-claim">差异只在"进入IT设计前怎么拿到spec"。优化时 RS和现状spec 并行产出、串行合并。优化只精确修改。</div>
         </div>
-        <div class="svg-stage reveal">
+        <div class="svg-stage">
         <svg viewBox="0 0 1040 480" xmlns="http://www.w3.org/2000/svg" font-family="PingFang SC,Microsoft YaHei,sans-serif">
             <defs>
                 <marker id="n2b" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto"><polygon points="0 0,9 3.5,0 7" fill="#2563eb"/></marker>
@@ -403,12 +412,12 @@ body.presenting .deck-progress, body.presenting .deck-sidebar { opacity: 0; poin
 <!-- ============ 协同 ============ -->
 <section class="slide" data-label="协同">
     <div class="slide-content">
-        <div class="page-head reveal">
+        <div class="page-head">
             <div class="page-num">03 / 协同</div>
             <div class="page-title">协同：与上下游<span class="key">靠 spec 交接</span>，<span class="key">制品推到各平台</span></div>
             <div class="page-claim">多个专业 agent 靠 spec 交接。读用 MCP 连，制品推到对应平台开发环境运行。下游接测试Agent。</div>
         </div>
-        <div class="svg-stage reveal">
+        <div class="svg-stage">
         <svg viewBox="0 0 1040 480" xmlns="http://www.w3.org/2000/svg" font-family="PingFang SC,Microsoft YaHei,sans-serif">
             <defs>
                 <marker id="n3b" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto"><polygon points="0 0,9 3.5,0 7" fill="#2563eb"/></marker>
@@ -529,12 +538,12 @@ body.presenting .deck-progress, body.presenting .deck-sidebar { opacity: 0; poin
 <!-- ============ 机制 ============ -->
 <section class="slide" data-label="机制">
     <div class="slide-content">
-        <div class="page-head reveal">
+        <div class="page-head">
             <div class="page-num">04 / 机制</div>
             <div class="page-title">机制：与开发环境<span class="key">螺旋迭代</span>，直到稳定</div>
             <div class="page-claim">不是"造完交付走"，是螺旋迭代：改→部署开发环境→跑→捞结果→改。代码稳定（agent判）+ 数据准确（人判），两层分开。</div>
         </div>
-        <div class="svg-stage reveal">
+        <div class="svg-stage">
         <svg viewBox="0 0 1040 480" xmlns="http://www.w3.org/2000/svg" font-family="PingFang SC,Microsoft YaHei,sans-serif">
             <defs>
                 <marker id="n4b" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto"><polygon points="0 0,9 3.5,0 7" fill="#2563eb"/></marker>
@@ -631,12 +640,12 @@ body.presenting .deck-progress, body.presenting .deck-sidebar { opacity: 0; poin
 <!-- ============ 能力矩阵 ============ -->
 <section class="slide" data-label="能力矩阵">
     <div class="slide-content">
-        <div class="page-head reveal">
+        <div class="page-head">
             <div class="page-num">05 / 全貌</div>
             <div class="page-title">能力矩阵：<span class="key">这个 agent 由什么构成</span></div>
             <div class="page-claim">纵轴=实现种类（Skill/Command/Protocol/MCP），横轴=战略层次。核心居中，基础在左，增强在右。格子高度=投入量。</div>
         </div>
-        <div class="svg-stage reveal">
+        <div class="svg-stage">
         <svg viewBox="0 0 1040 480" xmlns="http://www.w3.org/2000/svg" font-family="PingFang SC,Microsoft YaHei,sans-serif">
             <!-- ══ 列标题（横轴：基础→核心→增强，核心居中）══ -->
             <rect x="130" y="6" width="270" height="22" rx="5" fill="#60a5fa"/>
@@ -886,6 +895,7 @@ class DeckPlayer {
             if (i === this.current && this.slides[i].classList.contains('current')) return;
             this.current = i;
             this.applyCurrent(i);
+            if (this.initProgram) this.initProgram();
             if (this.presenting) this.slides[i].querySelectorAll('.shown').forEach(e => e.classList.remove('shown'));
         } else {
             this.current = i;
@@ -895,6 +905,7 @@ class DeckPlayer {
     }
     step() {
         if (this.presenting) {
+            if (this.programStep && this.programStep()) return;  // 申报程序优先（animation.md）
             const hidden = this.slides[this.current].querySelectorAll('.reveal:not(.shown)');
             if (hidden.length) { hidden[0].classList.add('shown'); this.endArm = false; return; }
             if (this.current < this.slides.length - 1) { this.show(this.current + 1); this.endArm = false; return; }
@@ -967,8 +978,9 @@ class DeckPlayer {
         this.mode = 'present'; this.presenting = true; this.endArm = false;
         this.applyMode();
         this.applyCurrent(this.current);
+        if (this.initProgram) this.initProgram();
         this.slides[this.current].querySelectorAll('.shown').forEach(el => el.classList.remove('shown'));
-        document.documentElement.requestFullscreen?.().catch(() => {});
+        document.documentElement.requestFullscreen?.().catch(() => {})
         this.flashHint('playerHint', '放映中 · →/单击 逐条推进 · F 退出', 3000);
     }
     endPresent() {
@@ -976,6 +988,7 @@ class DeckPlayer {
         document.body.classList.remove('presenting');
         if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
         this.applyMode();
+        if (this.initProgram) this.initProgram();
     }
     bindPresent() {
         document.getElementById('presentBtn').addEventListener('click', () => this.togglePresent());
@@ -1020,7 +1033,256 @@ class DeckPlayer {
         setTimeout(() => el.classList.remove('show'), dur || 2000);
     }
 }
-new DeckPlayer();
+const DECK_STEPS_DATA = {
+  '形态': [
+    ['t', [
+      ['veil', [25,15,990,290]],
+      ['lit',  [30,30,270,34]],
+      ['move', 155,47, 485,47, 650],
+      ['lit',  [340,30,290,34]],
+      ['move', 485,47, 840,47, 650],
+      ['lit',  [670,30,340,34]],
+      ['move', 840,55, 177,84, 700],
+      ['gate', 177,66],
+      ['move', 177,92, 97,185, 500],
+      ['lit',  [50,160,95,50]],
+      ['move', 147,185, 260,185, 450],
+      ['lit',  [260,154,155,62]],
+      ['move', 417,185, 430,185, 300],
+      ['lit',  [430,160,90,50]],
+      ['move', 522,185, 535,185, 300],
+      ['lit',  [535,154,120,62]],
+      ['move', 657,185, 670,185, 300],
+      ['lit',  [670,160,85,50]],
+      ['move', 757,185, 777,90, 450],
+      ['gate', 777,66],
+      ['move', 777,92, 853,185, 450],
+      ['lit',  [803,154,100,62]],
+    ]],
+    ['w', [28,324,362,32]],
+    ['w', [390,324,550,32]],
+  ],
+  '场景': [
+    ['t', [
+      ['veil', [25,30,330,210]],
+      ['lit',  [30,40,200,56]],
+      ['move2', 130,68, 130,206, 345,155, 700],
+      ['lit',  [334,144,22,22]],
+      ['move', 345,155, 500,157, 500],
+      ['lit',  [370,126,630,62]],
+    ]],
+    ['w', [30,318,310,56]],
+    ['w', [350,318,310,56]],
+    ['w', [670,318,330,56]],
+  ],
+  '协同': [
+    ['t', [
+      ['veil', [25,30,675,130]],
+      ['lit',  [30,38,155,52]],
+      ['lit',  [30,100,155,52]],
+      ['move2', 213,62, 223,124, 423,105, 700],
+      ['lit',  [338,70,170,70]],
+      ['move', 508,96, 627,106, 500],
+      ['lit',  [562,82,130,48]],
+    ]],
+    ['w', [35,202,970,28]],
+    ['w', [35,234,970,28]],
+    ['w', [35,266,970,28]],
+    ['w', [35,298,970,28]],
+    ['w', [35,330,970,28]],
+    ['w', [35,362,970,28]],
+  ],
+  '机制': [
+    ['t', [
+      ['veil', [40,30,460,360]],
+      ['lit',  [50,50,110,48]],
+      ['move', 105,74, 231,76, 400],
+      ['lit',  [188,56,86,40]],
+      ['move', 231,76, 362,74, 400],
+      ['lit',  [302,50,120,48]],
+      ['move', 362,74, 362,140, 350],
+      ['gate', 270,139],
+      ['back', 270,139, 105,74, 550],
+      ['move', 105,74, 362,74, 500],
+      ['move', 362,140, 270,192, 400],
+      ['lit',  [235,178,70,28]],
+      ['move', 270,206, 270,244, 300],
+      ['state', [210,228,120,32]],
+      ['move', 270,260, 270,303, 350],
+      ['gate', 270,282],
+      ['move', 270,324, 270,361, 350],
+      ['state', [215,346,110,30]],
+    ]],
+    ['w', [530,250,466,18], [188,56,86,40]],
+    ['w', [530,276,466,18], [318,120,88,40]],
+    ['w', [530,300,466,18], [210,228,120,32]],
+    ['w', [534,64,225,80]],
+    ['w', [769,64,225,80]],
+  ],
+  '能力矩阵': [
+    ['w', [125,42,885,172]],
+    ['w', [125,214,885,108]],
+    ['w', [125,324,885,68]],
+    ['w', [125,394,885,76]],
+    ['pulse', [718,434,294,36]],
+  ],
+};
+
+/* ===== 动画步进程序执行器（StepFX）：申报见 animation.md；终态=静态整页 ===== */
+Object.assign(DeckPlayer.prototype, {
+    initProgram() {
+        this.prog = null; this.progLabel = null; this.pi = 0;
+        this.tourActive = false; this.tourWait = false; this.tourSkip = false;
+        this.clearFx();
+    },
+    clearFx() {
+        if (this.fxRaf) { cancelAnimationFrame(this.fxRaf); this.fxRaf = null; }
+        if (this.fx) this.fx.remove();
+        this.fx = null; this.fxSvg = null; this.fxToken = null; this.fxVeilEl = null;
+        this.walkEl = null; this.walkEl2 = null; this.gateRing = null;
+    },
+    programStep() {
+        if (this.tourWait) { const r = this.tourResolve; this.tourWait = false; this.busy = true; if (r) r(); return true; }
+        if (this.tourActive) { this.tourSkip = true; return true; }
+        const label = this.slides[this.current].dataset.label;
+        if (this.progLabel !== label) {
+            this.progLabel = label;
+            this.prog = (window.DECK_STEPS || {})[label] || null;
+            this.pi = 0;
+        }
+        if (!this.prog) return false;
+        if (this.pi >= this.prog.length) return false;
+        const a = this.prog[this.pi++];
+        this.busy = true;
+        Promise.resolve(this.runAction(a)).then(() => { this.busy = false; });
+        return true;
+    },
+    fxLayer() {
+        const svg = this.slides[this.current].querySelector('svg');
+        if (!svg) return null;
+        if (!this.fx || this.fxSvg !== svg) {
+            this.fx = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            this.fx.setAttribute('class', 'fx-layer');
+            svg.appendChild(this.fx);
+            this.fxSvg = svg;
+        }
+        return this.fx;
+    },
+    fxEl(tag, attrs, cls) {
+        const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+        for (const k in attrs) el.setAttribute(k, attrs[k]);
+        if (cls) el.setAttribute('class', cls);
+        this.fx.appendChild(el);
+        return el;
+    },
+    wait(ms) { return new Promise(r => setTimeout(r, ms)); },
+    async runAction(a) {
+        const fx = this.fxLayer();
+        if (!fx) return;
+        const kind = a[0];
+        if (kind === 't') return this.runTour(a[1]);
+        if (kind === 'w') {
+            if (this.walkEl) this.walkEl.remove();
+            if (this.walkEl2) this.walkEl2.remove();
+            const r = a[1];
+            this.walkEl = this.fxEl('rect', { x: r[0], y: r[1], width: r[2], height: r[3], rx: 8, class: 'fx-lit' });
+            if (a[2]) this.walkEl2 = this.fxEl('rect', { x: a[2][0], y: a[2][1], width: a[2][2], height: a[2][3], rx: 8, class: 'fx-lit' });
+            await this.wait(140);
+            return;
+        }
+        if (kind === 'pulse') {
+            const r = a[1];
+            const el = this.fxEl('rect', { x: r[0], y: r[1], width: r[2], height: r[3], rx: 10, class: 'fx-pulse' });
+            await this.wait(950);
+            el.remove();
+            return;
+        }
+    },
+    async runTour(micros) {
+        this.tourActive = true; this.tourSkip = false;
+        for (const m of micros) {
+            if (this.tourSkip && m[0] !== 'gate') { this.skipMicro(m); continue; }
+            switch (m[0]) {
+                case 'veil': this.fxVeil(m[1]); await this.wait(420); break;
+                case 'lit': this.fxGlow(m[1], 'fx-lit'); await this.wait(160); break;
+                case 'state': this.fxGlow(m[1], 'fx-state'); await this.wait(160); break;
+                case 'move': await this.fly(m[1], m[2], m[3], m[4], m[5] || 550, '#2563eb'); break;
+                case 'move2': await this.fly2(m[1], m[2], m[3], m[4], m[5], m[6] || 700); break;
+                case 'back': await this.fly(m[1], m[2], m[3], m[4], m[5] || 480, '#ef4444'); break;
+                case 'pulse': { const el = this.fxEl('rect', { x: m[1][0], y: m[1][1], width: m[1][2], height: m[1][3], rx: 10, class: 'fx-pulse' }); await this.wait(900); el.remove(); break; }
+                case 'gate': if (this.tourSkip) break; await this.waitGate(m[1], m[2]); break;
+            }
+        }
+        this.tourActive = false; this.tourSkip = false;
+        await this.endTour();
+    },
+    skipMicro(m) {
+        if (m[0] === 'veil') { this.fxVeil(m[1]); this.fxVeilEl.classList.add('on'); }
+        else if (m[0] === 'lit') this.fxGlow(m[1], 'fx-lit');
+        else if (m[0] === 'state') this.fxGlow(m[1], 'fx-state');
+    },
+    fxVeil(rect) {
+        if (!this.fxVeilEl) this.fxVeilEl = this.fxEl('rect', { x: rect[0], y: rect[1], width: rect[2], height: rect[3], rx: 10, class: 'fx-veil' });
+        requestAnimationFrame(() => this.fxVeilEl.classList.add('on'));
+    },
+    fxGlow(rect, cls) {
+        this.fxEl('rect', { x: rect[0], y: rect[1], width: rect[2], height: rect[3], rx: 8, class: cls });
+    },
+    newToken(color) {
+        if (!this.fxToken) this.fxToken = this.fxEl('circle', { r: 9, fill: color, opacity: .95, stroke: '#fff', 'stroke-width': 2 });
+        this.fxToken.setAttribute('fill', color);
+        this.fxToken.setAttribute('opacity', .95);
+        return this.fxToken;
+    },
+    fly(x1, y1, x2, y2, dur, color) {
+        return new Promise(res => {
+            const token = this.newToken(color);
+            const t0 = performance.now();
+            const tick = now => {
+                if (!this.tourActive) { res(); return; }
+                const k = this.tourSkip ? 1 : Math.min(1, (now - t0) / dur);
+                const e = 1 - Math.pow(1 - k, 3);
+                token.setAttribute('cx', x1 + (x2 - x1) * e);
+                token.setAttribute('cy', y1 + (y2 - y1) * e);
+                if (k < 1) this.fxRaf = requestAnimationFrame(tick); else res();
+            };
+            this.fxRaf = requestAnimationFrame(tick);
+        });
+    },
+    fly2(ax, ay, bx, by, tx, ty, dur) {
+        return new Promise(res => {
+            const ta = this.fxEl('circle', { r: 8, fill: '#f59e0b', opacity: .95, stroke: '#fff', 'stroke-width': 2 });
+            const tb = this.fxEl('circle', { r: 8, fill: '#f59e0b', opacity: .95, stroke: '#fff', 'stroke-width': 2 });
+            const t0 = performance.now();
+            const tick = now => {
+                if (!this.tourActive) { ta.remove(); tb.remove(); res(); return; }
+                const k = this.tourSkip ? 1 : Math.min(1, (now - t0) / dur);
+                const e = 1 - Math.pow(1 - k, 3);
+                ta.setAttribute('cx', ax + (tx - ax) * e); ta.setAttribute('cy', ay + (ty - ay) * e);
+                tb.setAttribute('cx', bx + (tx - bx) * e); tb.setAttribute('cy', by + (ty - by) * e);
+                if (k < 1) this.fxRaf = requestAnimationFrame(tick); else { ta.remove(); tb.remove(); res(); }
+            };
+            this.fxRaf = requestAnimationFrame(tick);
+        });
+    },
+    waitGate(x, y) {
+        this.gateRing = this.fxEl('circle', { cx: x, cy: y, r: 16, class: 'fx-gate' });
+        this.flashHint('playerHint', '单击确认，继续', 1600);
+        this.tourWait = true;
+        this.busy = false;
+        return new Promise(res => { this.tourResolve = () => { if (this.gateRing) { this.gateRing.remove(); this.gateRing = null; } res(); }; });
+    },
+    async endTour() {
+        if (this.fxVeilEl) { this.fxVeilEl.classList.remove('on'); await this.wait(450); }
+        if (this.fxToken) this.fxToken.setAttribute('opacity', 0);
+        await this.wait(200);
+        this.clearFx();
+    },
+});
+
+const DECK_STEPS = DECK_STEPS_DATA;
+window.DECK_STEPS = DECK_STEPS;
+window.__deck = new DeckPlayer();
 </script>
 </body>
 </html>
