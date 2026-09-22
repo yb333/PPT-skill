@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<!-- deck-studio 契约验证 fixture（干净版）：应通过溢出门禁（退出码 0）。
+     契约要素：section.slide[data-label] / 100vw×100vh + overflow:hidden / .reveal + .slide.visible /
+     播放器杂物类名 .deck-progress .nav-dots .pres-cursor .player-hint / 主题色 token 化。 -->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>deck-studio fixture · 干净版</title>
+<style>
+  :root {
+    --c-info: #3b82f6; --c-exec: #2563eb; --c-guard: #60a5fa;
+    --bg-card: #f8fafc; --border-card: #e2e8f0; --bg-block: #f1f5f9;
+    --text: #1e293b; --text-sub: #64748b; --text-faint: #94a3b8;
+    --title-size: clamp(1.5rem, 5vw, 4rem);
+    --body-size: clamp(0.75rem, 1.5vw, 1.125rem);
+    --slide-padding: clamp(1rem, 4vw, 4rem);
+    --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; overflow-x: hidden; }
+  html { scroll-snap-type: y mandatory; scroll-behavior: smooth; }
+  body { font-family: "PingFang SC", "Microsoft YaHei", sans-serif; color: var(--text); }
+  .slide {
+    width: 100vw; height: 100vh; height: 100dvh; overflow: hidden;
+    scroll-snap-align: start; display: flex; flex-direction: column;
+    position: relative; padding: var(--slide-padding);
+  }
+  .slide-content { flex: 1; display: flex; flex-direction: column; justify-content: center; max-height: 100%; overflow: hidden; }
+  .reveal { opacity: 0; transform: translateY(30px);
+    transition: opacity .6s var(--ease-out-expo), transform .6s var(--ease-out-expo); }
+  .reveal:nth-child(2) { transition-delay: .15s; }
+  .reveal:nth-child(3) { transition-delay: .3s; }
+  .slide.visible .reveal { opacity: 1; transform: translateY(0); }
+  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(0.5rem, 1.5vw, 1rem); margin-top: 2.5vh; }
+  .card { background: linear-gradient(180deg, #dbeafe, #bfdbfe); border: 1px solid var(--border-card);
+    border-radius: 14px; padding: 2.2vh 1.4vw; }
+  .card h3 { font-size: clamp(1rem, 2vw, 1.5rem); margin-bottom: 1vh; }
+  .card p { font-size: var(--body-size); color: var(--text-sub); line-height: 1.5; }
+  .key { color: var(--c-exec); }
+  /* 播放器杂物（工具截图/测量前隐藏的契约类名） */
+  .deck-progress { position: fixed; top: 0; left: 0; width: 100%; height: 3px; z-index: 100; background: var(--border-card); }
+  #progressBar { height: 100%; width: 0%; background: linear-gradient(90deg, var(--c-info), var(--c-exec)); transition: width .4s ease; }
+  .nav-dots { position: fixed; right: 12px; top: 50%; transform: translateY(-50%); z-index: 100;
+    display: flex; flex-direction: column; gap: 6px; }
+  .nav-dot { width: 6px; height: 6px; border-radius: 50%; background: #cbd5e1; cursor: pointer; transition: all .3s ease; }
+  .nav-dot.active { background: var(--c-info); transform: scale(1.5); }
+  .player-hint { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); font-size: 12px;
+    color: var(--text-faint); background: rgba(255,255,255,.9); padding: 6px 16px; border-radius: 20px;
+    border: 1px solid var(--border-card); z-index: 9999; opacity: 0; transition: opacity .3s ease;
+    pointer-events: none; white-space: nowrap; }
+  .player-hint.show { opacity: 1; }
+  body.presenting .slide.visible [class*="reveal"]:not(.shown) { opacity: 0 !important; transform: translateY(30px) !important; }
+  body.presenting .nav-dots, body.presenting .deck-progress { opacity: 0; pointer-events: none; }
+</style>
+</head>
+<body>
+  <div class="deck-progress"><div id="progressBar"></div></div>
+  <nav class="nav-dots" id="navDots" aria-label="页面导航"></nav>
+  <div class="player-hint" id="playerHint">F 全屏放映 · ←→ 翻页 · P 聚光灯</div>
+
+  <section class="slide" data-label="封面">
+    <div class="slide-content">
+      <h1 class="reveal" style="font-size:var(--title-size)">deck-studio 契约 Fixture</h1>
+      <p class="reveal" style="font-size:clamp(1rem,2vw,1.5rem);color:var(--text-sub);margin-top:1.5vh">
+        溢出版：第二页内容故意超出 1080px 高度，门禁应报溢出（退出码 1）
+      </p>
+    </div>
+  </section>
+
+  <section class="slide" data-label="三层能力">
+    <div class="slide-content">
+      <h2 class="reveal" style="font-size:clamp(1.25rem,3.5vw,2.5rem)">三层能力总览（故意溢出）</h2>
+      <ul class="reveal" style="margin-top:2vh;font-size:var(--body-size);line-height:1.5">
+        <li>检查项 01：overflow:hidden 页内超高内容应被检出</li>
+        <li>检查项 02：每行预留 80px 高度 × 16 行 = 1280px &gt; 1080px</li>
+        <li>检查项 03</li>
+        <li>检查项 04</li>
+        <li>检查项 05</li>
+        <li>检查项 06</li>
+        <li>检查项 07</li>
+        <li>检查项 08</li>
+        <li>检查项 09</li>
+        <li>检查项 10</li>
+        <li>检查项 11</li>
+        <li>检查项 12</li>
+        <li>检查项 13</li>
+        <li>检查项 14</li>
+        <li>检查项 15</li>
+        <li>检查项 16</li>
+      </ul>
+      <style>.slide li { min-height: 80px; border-bottom: 1px solid var(--border-card); display: flex; align-items: center; }</style>
+    </div>
+  </section>
+
+  <section class="slide" data-label="结尾">
+    <div class="slide-content" style="align-items:center;text-align:center">
+      <h2 class="reveal" style="font-size:clamp(1.25rem,3.5vw,2.5rem)">验证通过即交付</h2>
+      <p class="reveal" style="font-size:var(--body-size);color:var(--text-sub);margin-top:1.5vh">
+        溢出门禁退出码 0 = 本 fixture 全页无溢出
+      </p>
+    </div>
+  </section>
+
+<script>
+  // 精简版 SlidePresentation（完整版见 references/player.md）
+  class SlidePresentation {
+    constructor() {
+      this.slides = [...document.querySelectorAll('section.slide')];
+      this.current = 0;
+      const nav = document.getElementById('navDots');
+      for (let i = 1; i < this.slides.length; i++) {
+        const d = document.createElement('div');
+        d.className = 'nav-dot'; d.title = this.slides[i].dataset.label || `Slide ${i + 1}`;
+        d.addEventListener('click', () => this.go(i));
+        nav.appendChild(d);
+      }
+      this.dots = [...nav.children];
+      const io = new IntersectionObserver(es => es.forEach(e => {
+        if (e.isIntersecting) e.target.classList.add('visible');
+      }), { threshold: 0.4 });
+      this.slides.forEach(s => io.observe(s));
+      addEventListener('scroll', () => {
+        this.current = Math.max(0, Math.min(this.slides.length - 1, Math.round(scrollY / innerHeight)));
+        document.getElementById('progressBar').style.width = (this.current + 1) / this.slides.length * 100 + '%';
+        this.dots.forEach((d, i) => d.classList.toggle('active', i + 1 === this.current));
+      }, { passive: true });
+      this.bindKeys(); this.bindClick();
+      const hint = document.getElementById('playerHint');
+      hint.classList.add('show'); setTimeout(() => hint.classList.remove('show'), 4000);
+    }
+    go(i) {
+      i = Math.max(0, Math.min(this.slides.length - 1, i));
+      this.slides[i].scrollIntoView({ behavior: 'smooth' });
+    }
+    step() {
+      const hidden = this.slides[this.current].querySelectorAll('[class*="reveal"]:not(.shown)');
+      if (document.body.classList.contains('presenting') && hidden.length) { hidden[0].classList.add('shown'); return; }
+      this.go(this.current + 1);
+    }
+    bindKeys() {
+      document.addEventListener('keydown', e => {
+        if (e.key === 'f' || e.key === 'F') {
+          document.fullscreenElement ? document.exitFullscreen()
+            : document.documentElement.requestFullscreen().catch(() => {});
+          return;
+        }
+        if (!document.body.classList.contains('presenting')) return;
+        if (['ArrowRight', 'ArrowDown', 'PageDown', ' '].includes(e.key)) { e.preventDefault(); this.step(); }
+        else if (['ArrowLeft', 'ArrowUp', 'PageUp'].includes(e.key)) { e.preventDefault(); this.go(this.current - 1); }
+      });
+    }
+    bindClick() {
+      document.addEventListener('click', e => {
+        if (!document.body.classList.contains('presenting')) return;
+        if (e.target.closest('a,button,input,textarea,select,.nav-dots')) return;
+        this.step();
+      });
+    }
+  }
+  document.addEventListener('fullscreenchange', () => {
+    const on = !!document.fullscreenElement;
+    document.body.classList.toggle('presenting', on);
+    document.querySelectorAll('.shown').forEach(el => el.classList.remove('shown'));
+  });
+  new SlidePresentation();
+</script>
+</body>
+</html>
