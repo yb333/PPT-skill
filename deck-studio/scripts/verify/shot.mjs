@@ -31,8 +31,14 @@ try {
   await page.waitForFunction(() => document.querySelectorAll('section.slide').length > 0, { timeout: 60000 });
   await page.waitForTimeout(5000); // 字体/图片 settle
   await page.addStyleTag({ content: `
-    .deck-progress,.nav-dots,.pres-cursor,.pres-cursor-hint,.player-hint,.keyboard-hint{display:none!important;}
+    /* 舞台架构静态化：取消缩放、页全显纵向堆叠（兼容旧滚动 deck，为 no-op） */
+    html,body{overflow:visible!important;height:auto!important;}
+    .deck-stage{position:static!important;}
+    .deck-fit{transform:none!important;width:1920px!important;height:auto!important;box-shadow:none!important;}
+    section.slide{position:relative!important;inset:auto!important;visibility:visible!important;opacity:1!important;display:flex!important;}
+    .deck-bar,.deck-progress,.nav-dots,.pres-cursor,.pres-cursor-hint,.player-hint,.keyboard-hint{display:none!important;}
     .reveal,.reveal-scale,.reveal-left,.reveal-blur{opacity:1!important;transform:none!important;filter:none!important;transition:none!important;}
+    .slide .reveal:not(.shown){opacity:1!important;}
     *{animation-play-state:paused!important;}` });
   await page.evaluate(() => document.querySelectorAll('.slide').forEach(s => s.classList.add('visible')));
   await page.waitForTimeout(400); // 强显后的重绘 settle
