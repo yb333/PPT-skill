@@ -12,8 +12,8 @@ frontend-slides 的融合重构后继（研发仓：`/Users/yuanbo/frontend-slid
 1. **人机协同共建** — 结构与动画与用户一起讨论产出，不是套模板填内容。大纲（Phase 1）与 Design Spec（Phase 2）是硬确认闸门。
 2. **零依赖单文件** — 单 HTML 内联 CSS/JS，无构建工具，离线可拷走。
 3. **Show, Don't Tell** — 用户说不清偏好就生成预览让他反应，不给抽象选项。
-4. **表达力优先** — 动画/演示光标/响应式是 HTML deck 对传统 PPT 的核心优势，不为 PPTX 可移植性牺牲；导出时压平为最终态快照（见宪法 3）。
-5. **视口适配（不可协商）** — 每页恰为一屏（100vw × 100vh），页内永不滚动；放不下就拆页。
+4. **表达力优先** — 动画/演示光标是 HTML deck 对传统 PPT 的核心优势，不为 PPTX 可移植性牺牲；导出时压平为最终态快照（见宪法 3）。
+5. **固定画布舞台（不可协商）** — 每页 1920×1080 逻辑画布，舞台缩放适配窗口，零滚动；打开即"一页就是一页"的 PPT 观感；放不下就拆页。
 
 ## 三条产品宪法（详版见 docs/DECISIONS.md，此处为执行摘要）
 
@@ -28,10 +28,10 @@ frontend-slides 的融合重构后继（研发仓：`/Users/yuanbo/frontend-slid
 
 ## Deck ↔ 工具契约（每个生成的 deck 必须遵守，验证/导出工具按此工作）
 
-1. 页面元素：`<section class="slide" data-label="页面标识">`。`data-label` 是页的唯一标识（中文短语，如 `data-label="上下文管理"`），工具按它定位页。
-2. 画布：`.slide` 为 100vw × 100vh、`overflow: hidden`，无 transform 祖先、无缩放容器。
-3. 渐显：统一用 `.reveal` + `.slide.visible .reveal { opacity:1 }` 模式（IntersectionObserver 给进入视口的 `.slide` 加 `.visible`）。
-4. 播放器杂物统一类名：`.deck-progress`（顶部进度条）、`.nav-dots`、`.pres-cursor`、`.pres-cursor-hint`、`.player-hint`——工具截图/测量前会隐藏它们。
+1. 页面元素：`<section class="slide" data-label="页面标识">`，置于舞台 `<div class="deck-stage"><div class="deck-fit">` 内。`data-label` 是页的唯一标识（中文短语），工具按它定位页。
+2. 画布：`.deck-fit` 固定 1920×1080，JS 缩放适配窗口（player.md 引擎）；页内 px 排版（layout.md 刻度），**禁止** 100vw/100vh、clamp()、滚动、IntersectionObserver。
+3. 渐显：`.reveal` + `.slide.current` 全显（浏览）/ `body.presenting` 下按 `.shown` 节拍步进（放映）。不用 IO。
+4. 播放器杂物统一类名：`.deck-stage` / `.deck-fit` / `.deck-bar` / `.deck-progress` / `.nav-dots` / `.pres-cursor` / `.pres-cursor-hint` / `.player-hint`——工具截图/测量前会隐藏或静态化它们。
 5. 主题色一律走 CSS 变量 token（`references/theme.md`），不写死 hex。
 
 ## Phase 0: 模式识别
@@ -64,13 +64,14 @@ frontend-slides 的融合重构后继（研发仓：`/Users/yuanbo/frontend-slid
 
 输入：Phase 1 内容 + Phase 2 spec + Phase 3 风格。产出单 HTML 文件。
 
-- **必读 `references/layout.md`**：视口适配 CSS 基建全文、密度上限、断点、溢出预防清单。
-- **必读 `references/player.md`**：播放器壳标准实现（进度条/nav dots/聚光灯/全屏放映 F/点击推进/reveal 步进），每个 deck 都要包含。
-- 图表/架构图/流程图：**必读 `references/svg-diagrams.md`**，inline SVG，禁 emoji/ASCII 图。
+- **必读 `references/layouts.md`**：页型库——**默认选库内页型**，库表达不了才自绘 SVG。
+- **必读 `references/layout.md`**：固定画布排版刻度（字号/卡片/密度/审美硬要求）。
+- **必读 `references/player.md`**：舞台引擎标准实现（1920×1080 缩放、浏览/放映双模式、滚轮逐页、reveal 步进、聚光灯），每个 deck 都要包含。
+- 图表/架构图/流程图（自绘时）：**必读 `references/svg-diagrams.md`**，inline SVG，禁 emoji/ASCII 图。
 - 文案落纸：**对照 `references/copywriting.md`**（中文规范、标题即观点、数字用法、删字检查）。
 - 动画：通用层默认全带；编排层按 spec 声明实现，词表与范式见 `references/animation.md`。
 
-HTML 骨架要点：`:root` token 变量区 → 基建样式 → 播放器样式 → 每页 `section.slide[data-label]` → `SlidePresentation` 控制器（键盘/触摸/滚轮导航 + IO 渐显 + 播放器壳）。代码注释解释"做什么/为什么/怎么改"。
+HTML 骨架要点：`:root` token 变量区 → 舞台/页/播放器样式 → `deck-stage > deck-fit > section.slide[data-label]` × N → 杂物（进度条/dots/deck-bar/提示）→ `DeckPlayer` 引擎。代码注释解释"做什么/为什么/怎么改"。
 
 **分段并行策略**：≤10 页单文件一次生成；11–15 页拆 2 段；>15 页拆 3 段（每段 5–7 页）。合并规则：CSS 只留一份 `:root` 去重；SVG `<defs>` 的 gradient/marker id 不冲突；data-label 保持唯一；nav dots 从第 2 页开始、总数=页数-1；JS 只留一个控制器、`totalSlides` 动态计算。
 
@@ -110,8 +111,9 @@ python3 ~/.zcode/skills/deck-studio/scripts/html2pptx/convert.py <deck.html> <ou
 | `references/process.md` | Phase 1/2/5 —— 协作流程深度规范（五件事、事实整理、场景适配表、plan.md、内容自检、讨论纪律） |
 | `references/theme.md` | Phase 4 —— 色板 token 体系与使用约束 |
 | `references/presets.md` | Phase 3 —— 12 套预设清单与 token 覆盖 |
-| `references/layout.md` | Phase 4 —— 视口适配 CSS 基建、密度上限、断点 |
-| `references/player.md` | Phase 4 —— 播放器壳标准实现 |
+| `references/layouts.md` | Phase 2/4 —— 页型库：默认选库内页型，自绘例外 |
+| `references/layout.md` | Phase 4 —— 固定画布排版刻度、卡片语汇、密度、审美硬要求 |
+| `references/player.md` | Phase 4 —— 舞台引擎（双模式/缩放/步进）标准实现 |
 | `references/svg-diagrams.md` | Phase 4 —— 架构图/流程图/图表规范与模板 |
 | `references/animation.md` | Phase 4 —— 动画两层策略与词表 |
 | `references/copywriting.md` | Phase 1/2/4 —— 文案规范（中文、标题句式、数字） |
