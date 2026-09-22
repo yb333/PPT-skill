@@ -89,10 +89,22 @@ try {
       ok(st.current === s0.total - 1, `节拍放完翻到下一页（current=${st.current}）`);
     }
   }
-  await page.keyboard.press('f');
+  // —— 末页行为：节拍放完 → 两次确认结束放映（重复页 bug 回归） ——
+  console.log('== 末页结束放映 ==');
+  for (let k = 0; k < st.revealCount; k++) { await page.keyboard.press('ArrowRight'); await page.waitForTimeout(450); }
+  const stLast = await state();
+  ok(stLast.presenting && stLast.current === s0.total - 1, '末页节拍放完仍在末页');
+  ok(stLast.revealCount === 0 || stLast.anyVisible, '末页 reveal 保持放出（未被重置）');
+  await page.keyboard.press('ArrowRight');
   await page.waitForTimeout(400);
+  ok(await page.evaluate(() => document.body.classList.contains('presenting')), '第一次 →：武装提示，不误退、不重复');
+  const shownKeep = await page.evaluate(() => [...document.querySelectorAll('section.slide.current .reveal.shown')].length);
+  ok(shownKeep === stLast.revealCount, `末页内容未被重置（shown=${shownKeep}/${stLast.revealCount}）`);
+  await page.keyboard.press('ArrowRight');
+  await page.waitForTimeout(500);
+  ok(!(await page.evaluate(() => document.body.classList.contains('presenting'))), '第二次 →：结束放映');
   st = await state();
-  ok(!st.presenting, 'F 退出放映态');
+  ok(st.current === s0.total - 1, `结束后停在最后一页（current=${st.current}）`);
 
   // —— 缩略图侧边窗（存在才测）——
   const hasToc = await page.evaluate(() => !!document.getElementById('deckMenu'));

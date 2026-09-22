@@ -133,7 +133,7 @@ class DeckPlayer {
     constructor() {
         this.fitEl = document.getElementById('deckFit');
         this.slides = [...this.fitEl.querySelectorAll('section.slide')];
-        this.current = 0; this.presenting = false;
+        this.current = 0; this.presenting = false; this.endArm = false;
         this.wheelAcc = 0; this.wheelQuiet = null;
         this.buildDots(); this.buildThumbs(); this.fit(); this.show(0);
         addEventListener('resize', () => this.fit());
@@ -187,6 +187,7 @@ class DeckPlayer {
     }
     show(i) {
         i = Math.max(0, Math.min(this.slides.length - 1, i));
+        if (i === this.current && this.slides[i].classList.contains('current')) return; // 同页重入：不重置节拍
         this.slides[this.current].classList.remove('current');
         this.current = i;
         const s = this.slides[i];
@@ -201,16 +202,30 @@ class DeckPlayer {
     step() {
         if (this.presenting) {
             const hidden = this.slides[this.current].querySelectorAll('.reveal:not(.shown)');
-            if (hidden.length) { hidden[0].classList.add('shown'); return; }
+            if (hidden.length) { hidden[0].classList.add('shown'); this.endArm = false; return; }
+            if (this.current < this.slides.length - 1) { this.show(this.current + 1); this.endArm = false; return; }
+            if (!this.endArm) { this.endArm = true; this.flashHint('playerHint', '已是最后一页 · 再按一次结束放映', 2600); return; }
+            this.endArm = false;
+            this.presenting = false;
+            document.body.classList.remove('presenting');
+            if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+            this.flashHint('playerHint', '放映结束', 2200);
+            return;
         }
-        this.show(this.current + 1);
+        if (this.current < this.slides.length - 1) { this.show(this.current + 1); this.endArm = false; }
+        else this.flashHint('playerHint', '已是最后一页', 1800);
     }
     back() {
+        this.endArm = false;
         if (this.presenting) {
             const shown = this.slides[this.current].querySelectorAll('.shown');
             if (shown.length) { shown[shown.length - 1].classList.remove('shown'); return; }
+            if (this.current > 0) { this.show(this.current - 1); return; }
+            this.flashHint('playerHint', '已是第一页', 1800);
+            return;
         }
-        this.show(this.current - 1);
+        if (this.current > 0) this.show(this.current - 1);
+        else this.flashHint('playerHint', '已是第一页', 1800);
     }
     bindKeys() {
         document.addEventListener('keydown', e => {
@@ -245,6 +260,7 @@ class DeckPlayer {
     togglePresent() {
         if (this.presenting) {
             this.presenting = false;
+            this.endArm = false;
             document.body.classList.remove('presenting');
             if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
             return;
@@ -261,6 +277,12 @@ class DeckPlayer {
                 this.presenting = false; document.body.classList.remove('presenting');
             }
         });
+    }
+    flashHint(id, text, dur) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.textContent = text; el.classList.add('show');
+        setTimeout(() => el.classList.remove('show'), dur || 2000);
     }
 }
 new DeckPlayer();

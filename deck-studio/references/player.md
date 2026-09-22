@@ -143,7 +143,7 @@ class DeckPlayer {
     constructor() {
         this.fitEl = document.getElementById('deckFit');
         this.slides = [...this.fitEl.querySelectorAll('section.slide')];
-        this.current = 0; this.presenting = false; this.cursorOn = false;
+        this.current = 0; this.presenting = false; this.cursorOn = false; this.endArm = false;
         this.wheelAcc = 0; this.wheelQuiet = null;
         this.buildDots(); this.buildThumbs(); this.fit(); this.show(0);
         addEventListener('resize', () => this.fit());
@@ -209,6 +209,7 @@ class DeckPlayer {
 
     show(i) {
         i = Math.max(0, Math.min(this.slides.length - 1, i));
+        if (i === this.current && this.slides[i].classList.contains('current')) return; // 同页重入：不重置节拍（末页循环 bug 护栏）
         this.slides[this.current].classList.remove('current');
         this.current = i;
         const s = this.slides[i];
@@ -222,20 +223,32 @@ class DeckPlayer {
         this.thumbs?.forEach((t, k) => t.classList.toggle('active', k === i));
     }
 
-    /* 放映模式：reveal 步进；浏览模式：直接翻页 */
+    /* 放映模式：reveal 步进，末页放完 → 两次确认退出放映；浏览模式：直接翻页 */
     step() {
         if (this.presenting) {
             const hidden = this.slides[this.current].querySelectorAll('.reveal:not(.shown)');
-            if (hidden.length) { hidden[0].classList.add('shown'); return; }
+            if (hidden.length) { hidden[0].classList.add('shown'); this.endArm = false; return; }
+            if (this.current < this.slides.length - 1) { this.show(this.current + 1); this.endArm = false; return; }
+            if (!this.endArm) { this.endArm = true; this.flashHint('playerHint', '已是最后一页 · 再按一次结束放映', 2600); return; }
+            this.endArm = false;
+            this.endPresent();
+            this.flashHint('playerHint', '放映结束', 2200);
+            return;
         }
-        this.show(this.current + 1);
+        if (this.current < this.slides.length - 1) { this.show(this.current + 1); this.endArm = false; }
+        else this.flashHint('playerHint', '已是最后一页', 1800);
     }
     back() {
+        this.endArm = false;
         if (this.presenting) {
             const shown = this.slides[this.current].querySelectorAll('.shown');
             if (shown.length) { shown[shown.length - 1].classList.remove('shown'); return; }
+            if (this.current > 0) { this.show(this.current - 1); return; }
+            this.flashHint('playerHint', '已是第一页', 1800);
+            return;
         }
-        this.show(this.current - 1);
+        if (this.current > 0) this.show(this.current - 1);
+        else this.flashHint('playerHint', '已是第一页', 1800);
     }
 
     bindKeys() {
@@ -284,6 +297,7 @@ class DeckPlayer {
     }
     endPresent() {
         this.presenting = false;
+        this.endArm = false;
         document.body.classList.remove('presenting');
         if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
     }
@@ -317,4 +331,6 @@ new DeckPlayer();
 - **放映进页清空 `.shown`**（重走节拍）；浏览模式 reveal 全显（阅读模式）。
 - **全屏被拒时降级**为纯放映 chrome（iframe 嵌入、无手势调用场景仍可用）。
 - **缩略图 = DOM 克隆**（`cloneNode` 后去掉 `.slide` 类、剥掉全部 id，加 `.thumb-page` 自足样式 + reveal 强制最终态）——克隆不匹配 `section.slide` 契约选择器，门禁/e2e/引擎都不会误伤；胶囊页码与 thumb 高亮在 `show()` 统一同步；Esc 关侧栏。
+- **同页重入护栏**：`show()` 对"i === current 且已在页上"直接返回——否则末页再按 → 会触发"进页清空 .shown"，页面无限重演（2026-09-22 用户报告的重复页 bug）。
+- **末页语义**：放映中节拍放完再按 → → 第一次武装提示"再按一次结束放映"，第二次 `endPresent()` 停在末页回浏览模式；浏览模式边界给"已是最后/第一页"提示。
 - 工具侧契约：measure_overflow / shot 注入强制 CSS（stage 静态化 + fit 取缩放 + 页全显 + chrome 隐藏），见脚本内注释。
