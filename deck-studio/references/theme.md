@@ -49,3 +49,5 @@
 ## 预设覆盖规则
 
 预设（presets.md）只覆盖 `:root` 的 token 值（可增补暗色背景 token），不改组件结构与布局规则。写作任何 deck 时正文引用 `var(--c-*)`，不写死 hex——换主题只动 `:root` 一处。方法论文档吸收进来的示例一律用 token 名表述强调色，不绑定华为红。
+
+**chrome 玻璃材质 token**（`--glass-bg` / `--glass-border` / `--glass-rim` / `--glass-shadow` / `--glass-blur`，定义见 player.md）：默认为浅色液态玻璃；暗色预设必须整体覆盖这组（如 `--glass-bg: rgba(20,28,45,.6)`，rim/shadow 换深色基调），否则玻璃在暗底上发白。
