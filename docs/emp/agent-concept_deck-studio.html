@@ -1265,18 +1265,28 @@ const DECK_STEPS = DECK_STEPS_DATA;
 window.DECK_STEPS = DECK_STEPS;
 window.__deck = new DeckPlayer();
 
-/* ===== 常驻流转试点：机制页活流程 v2 —— 每周期走全部分支（报错回改→校验回改→通过交付）后到达产出节点；
-   无叠加线条（原图有线，动画只动光点）；离页自动暂停；reduced-motion 静态 ===== */
+/* ===== 常驻流转试点 v3：机制页活流程 —— 每周期走完全部回路（报错回改→校验回改→人判语义回改→通过交付），
+   交付后呼吸停顿再开新周期。节奏依据：平滑追踪舒适区 ~30°/s 视角（3m 观看/2.5m 宽幕 ≈ 全屏 2~4s 横穿）、
+   节点识读 ≥400ms、闸口语义停留 ~1s；无叠加线条（原图有线，动画只动光点）；
+   离页自动暂停；reduced-motion 静态 ===== */
 (function () {
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const deck = window.__deck;
     const IDX = deck.slides.findIndex(s => s.dataset.label === '机制');
     if (IDX < 0) return;
-    const SPEED = 240;
-    const CYCLE = [
-        { kind: 'fail1', backFrom: 4, wp: [[105,74],[231,76],[362,74],[362,140],[270,139],[190,118],[105,74]] },
-        { kind: 'fail2', backFrom: 5, wp: [[105,74],[231,76],[362,74],[362,140],[270,139],[270,192],[160,168],[105,74]] },
-        { kind: 'pass',  backFrom: 99, wp: [[105,74],[231,76],[362,74],[362,140],[270,139],[270,192],[270,244],[270,303],[270,361]] },
+    const SPEED = 200;      // 光点速度（单位/秒）：追踪舒适区下限——回路沿线需读节点标签
+    const DECIDE_MS = 500;  // 判定菱形停留：识读"报错?/校验过?"标签 ≥400ms
+    const GATE_MS = 950;    // 人判闸口：语义是"等人"，停留需明显长于判定
+    const REST_MS = 1800;   // 整周期交付后的呼吸停顿
+    const ROUTES = [
+        { kind: 'fail1', backFrom: 4, decide: { at: 4, ms: DECIDE_MS, then: 'red' },
+          wp: [[105,74],[231,76],[362,74],[362,140],[270,139],[190,118],[105,74]] },
+        { kind: 'fail2', backFrom: 5, decide: { at: 5, ms: DECIDE_MS, then: 'red' },
+          wp: [[105,74],[231,76],[362,74],[362,140],[270,139],[270,192],[160,168],[105,74]] },
+        { kind: 'fail3', backFrom: 8, decide: { at: 7, ms: GATE_MS, gate: true, then: 'red' },
+          wp: [[105,74],[231,76],[362,74],[362,140],[270,139],[270,192],[270,244],[270,303],[400,303],[400,80],[160,80],[105,74]] },
+        { kind: 'pass', backFrom: 99, decide: { at: 7, ms: GATE_MS, gate: true, then: 'blue' },
+          wp: [[105,74],[231,76],[362,74],[362,140],[270,139],[270,192],[270,244],[270,303],[270,361]] },
     ];
     const NODES = {0:[50,50,110,48],1:[188,56,86,40],2:[302,50,120,48],3:[318,120,88,40],4:[250,124,40,30],5:[235,178,70,28],6:[210,228,120,32],7:[200,282,140,42],8:[215,346,110,30]};
     const NS = 'http://www.w3.org/2000/svg';
@@ -1284,8 +1294,8 @@ window.__deck = new DeckPlayer();
     let cycleIdx = 0, ri = 0, segT = 0;
     let phase = 'move', phaseT = 0, afterPhase = null, last = 0, raf = 0, poll = 0;
 
-    const kind = () => CYCLE[cycleIdx].kind;
-    const route = () => CYCLE[cycleIdx].wp;
+    const kind = () => ROUTES[cycleIdx].kind;
+    const route = () => ROUTES[cycleIdx].wp;
     const active = () => deck.current === IDX && !document.hidden;
     function el(tag, attrs, cls) {
         const n = document.createElementNS(NS, tag);
@@ -1300,8 +1310,6 @@ window.__deck = new DeckPlayer();
         layer.setAttribute('class', 'ambient-layer');
         svg.appendChild(layer);
         stateEl = el('rect', { x: 210, y: 228, width: 120, height: 32, rx: 8 }, 'fstate');
-        gateEl = el('circle', { cx: 270, cy: 303, r: 16 }, 'fgate');
-        gateEl.style.opacity = 0;
         token = el('circle', { cx: 105, cy: 74, r: 8 }, 'ftoken');
         token.setAttribute('fill', '#2563eb');
         token.setAttribute('stroke', '#fff');
@@ -1318,25 +1326,28 @@ window.__deck = new DeckPlayer();
     function pause(ms, after) { phase = 'pause'; phaseT = ms; afterPhase = after || null; }
     function arrive(i) {
         nodePulse(i);
-        const onBack = i >= CYCLE[cycleIdx].backFrom;
-        setToken(onBack ? '#ef4444' : '#2563eb');
-        const k = kind();
-        if (k === 'fail1' && i === 4) { ri++; return pause(300); } // 报错判定：停一拍再回改（先推进索引，杜绝折返卡死）
-        if (k === 'fail2' && i === 5) { ri++; return pause(300); } // 校验判定：同上
-        if (k === 'pass' && i === 6) stateEl.classList.add('on');  // 代码稳定：状态点亮
-        if (k === 'pass' && i === 7) {                              // 人判闸口：琥珀停顿（推进索引后再停，杜绝卡死）
-            setToken('#f59e0b');
+        const R = ROUTES[cycleIdx];
+        setToken(i >= R.backFrom ? '#ef4444' : '#2563eb');
+        const d = R.decide;
+        if (d && i === d.at) {                                     // 判定停顿：先推进索引再停（杜绝折返卡死）
+            setToken(d.gate ? '#f59e0b' : '#ef4444');
+            if (!gateEl) gateEl = el('circle', { cx: 270, cy: 303, r: 16 }, 'fgate');
             gateEl.style.opacity = 1;
             ri++;
-            return pause(750, () => { gateEl.style.opacity = 0; setToken('#2563eb'); });
+            return pause(d.ms, () => {
+                if (gateEl) { gateEl.remove(); gateEl = null; }    // 移除元素（内联 opacity 压不过无限动画）
+                if (d.then === 'red') { setToken('#ef4444'); stateEl.classList.remove('on'); }
+                else setToken('#2563eb');
+            });
         }
+        if (kind() === 'pass' && i === 6) stateEl.classList.add('on');
         ri++;
-        if (ri >= route().length - 1) endRoute();
+        if (ri >= R.wp.length - 1) endRoute();
     }
     function endRoute() {
         const k = kind();
-        if (k === 'pass') {                                         // 全分支走完 → 交付产出，随后开启新周期
-            phase = 'fade'; phaseT = 900;
+        if (k === 'pass') {                                         // 全回路走完 → 交付产出，休息后开新周期
+            phase = 'rest'; phaseT = REST_MS;
             token.setAttribute('opacity', 0);
             afterPhase = () => { stateEl.classList.remove('on'); nextRoute(); token.setAttribute('opacity', .95); };
         } else {                                                    // 打回路线走完：改代码处重启脉冲
@@ -1345,9 +1356,9 @@ window.__deck = new DeckPlayer();
             afterPhase = () => { nextRoute(); setToken('#2563eb'); };
         }
     }
-    function nextRoute() { cycleIdx = (cycleIdx + 1) % CYCLE.length; ri = 0; segT = 0; }
+    function nextRoute() { cycleIdx = (cycleIdx + 1) % ROUTES.length; ri = 0; segT = 0; }
     function step(dt) {
-        if (phase === 'pause' || phase === 'fade') {
+        if (phase !== 'move') {
             phaseT -= dt;
             if (phaseT <= 0) { const f = afterPhase; afterPhase = null; phase = 'move'; if (f) f(); }
             return;
