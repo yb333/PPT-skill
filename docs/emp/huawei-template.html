@@ -46,7 +46,8 @@
     text-shadow: 0 1px 8px rgba(6,18,40,.4);
   }
   .tpl-bar {
-    position: absolute; left: 0; right: 0; bottom: 0; height: 92px;
+    /* 原模板量测：高 3.32cm / 页高 19.05cm = 17.43% → 1080px 画布上 188px；宽 = 全幅 33.87cm */
+    position: absolute; left: 0; right: 0; bottom: 0; height: 188px;
     background: var(--tpl-bar); display: flex; align-items: center;
     justify-content: space-between; padding: 0 44px;
   }
