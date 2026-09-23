@@ -358,7 +358,8 @@ class DeckPlayer {
         if (this.presenting) { this.endPresent(); return; }
         this.mode = 'present'; this.presenting = true; this.endArm = false;
         this.applyMode();
-        this.applyCurrent(this.current);
+        this.show(0);                                        // 从头播放：放映恒自封面起
+        this.slides[0].querySelectorAll('.shown').forEach(el => el.classList.remove('shown'));
         this.slides[this.current].querySelectorAll('.shown').forEach(el => el.classList.remove('shown'));
         document.documentElement.requestFullscreen?.().catch(() => {});   // 被拒（iframe/无手势）仍保持放映 chrome
         this.flashHint('playerHint', '放映中 · →/单击 逐条推进 · F 退出', 3000);
@@ -371,6 +372,9 @@ class DeckPlayer {
     }
     bindPresent() {
         document.getElementById('presentBtn')?.addEventListener('click', () => this.togglePresent());
+        document.addEventListener('fullscreenchange', () => {
+            if (!document.fullscreenElement && this.presenting) this.endPresent();   // Esc 退全屏 = 同步退放映
+        });
     }
 
     bindCursor() { /* 同 v2：mousemove 记录、rAF lerp 跟随、2s 静默 fading */ }
