@@ -120,6 +120,7 @@ python3 ~/.zcode/skills/deck-studio/scripts/html2pptx/convert.py <deck.html> <ou
 | `references/animation.md` | Phase 2/4 —— 动画申报制：默认零动画、八机制词表、DECK_STEPS/AMBIENT 声明格式、节奏依据 |
 | `assets/effects/` | Phase 4 —— 动画效果基建（stepfx.js/ambient.js/effects.css），整体嵌入，作者只写数据 |
 | `assets/templates/yunshan.html` | 品牌模板 —— 华为云山联名封面+结束页：复制后只改填写区三处文字（标题/日期/作者），内容页夹在两页之间 |
+| `assets/templates/yunshan-content.html` | 品牌模板 —— 云山内容页四型骨架（内容页/卡片网格/表格混排/深蓝金句），按页型复制替换占位文案 |
 | `references/copywriting.md` | Phase 1/2/4 —— 文案规范（中文、标题句式、数字） |
 
 ## 常见故障
