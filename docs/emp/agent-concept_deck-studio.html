@@ -162,10 +162,6 @@ body.presenting .deck-progress, body.presenting .deck-sidebar { opacity: 0; poin
 .fx-layer .fx-pulse { fill: rgba(239,68,68,.16); stroke: #ef4444; stroke-width: 2; animation: fxpulse .9s ease-out 1 forwards; }
 @keyframes fxpulse { 0% { opacity: .85; } 100% { opacity: 0; } }
 /* ===== 常驻流转（ambient）：回路机制页试点 ===== */
-.ambient-layer .flow { fill: none; stroke: rgba(37,99,235,.4); stroke-width: 2.5; stroke-dasharray: 5 9; stroke-linecap: round; animation: dashflow 1.1s linear infinite; }
-.ambient-layer .flow.red { stroke: rgba(239,68,68,.35); animation-duration: .9s; }
-.ambient-layer .flow.red.hot { stroke: rgba(239,68,68,.85); }
-@keyframes dashflow { to { stroke-dashoffset: -14; } }
 .ambient-layer .fpulse { fill: none; stroke: var(--c-info, #3b82f6); stroke-width: 2; opacity: 0; transform-box: fill-box; transform-origin: center; animation: fnodep .7s ease-out 1 forwards; }
 @keyframes fnodep { 0% { opacity: .9; transform: scale(.5); } 100% { opacity: 0; transform: scale(1.6); } }
 .ambient-layer .fgate { fill: none; stroke: #f59e0b; stroke-width: 3; animation: fxgate 1s ease-in-out infinite; }
@@ -1269,23 +1265,28 @@ const DECK_STEPS = DECK_STEPS_DATA;
 window.DECK_STEPS = DECK_STEPS;
 window.__deck = new DeckPlayer();
 
-/* ===== 常驻流转试点：机制页活流程（回路内容专属；离页暂停 / reduced-motion 静态） ===== */
+/* ===== 常驻流转试点：机制页活流程 v2 —— 每周期走全部分支（报错回改→校验回改→通过交付）后到达产出节点；
+   无叠加线条（原图有线，动画只动光点）；离页自动暂停；reduced-motion 静态 ===== */
 (function () {
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const deck = window.__deck;
     const IDX = deck.slides.findIndex(s => s.dataset.label === '机制');
     if (IDX < 0) return;
-    const SPEED = 240, GATE_MS = 900;
-    const GREEN = [[105,74],[231,76],[362,74],[362,140],[270,139],[270,192],[270,244],[270,303],[270,361]];
-    const RED = [[270,139],[105,74]];
-    const NODES = {0:[50,50,110,48],1:[188,56,86,40],2:[302,50,120,48],3:[318,120,88,40],5:[235,178,70,28],6:[210,228,120,32],7:[200,282,140,42],8:[215,346,110,30]};
+    const SPEED = 240;
+    const CYCLE = [
+        { kind: 'fail1', backFrom: 4, wp: [[105,74],[231,76],[362,74],[362,140],[270,139],[190,118],[105,74]] },
+        { kind: 'fail2', backFrom: 5, wp: [[105,74],[231,76],[362,74],[362,140],[270,139],[270,192],[160,168],[105,74]] },
+        { kind: 'pass',  backFrom: 99, wp: [[105,74],[231,76],[362,74],[362,140],[270,139],[270,192],[270,244],[270,303],[270,361]] },
+    ];
+    const NODES = {0:[50,50,110,48],1:[188,56,86,40],2:[302,50,120,48],3:[318,120,88,40],4:[250,124,40,30],5:[235,178,70,28],6:[210,228,120,32],7:[200,282,140,42],8:[215,346,110,30]};
     const NS = 'http://www.w3.org/2000/svg';
-    let layer = null, token = null, stateEl = null, gateEl = null, redPath = null;
-    let route = GREEN, ri = 0, lap = 0, segT = 0;
-    let phase = 'move', phaseT = 0, last = 0, raf = 0, poll = 0;
+    let layer, token, stateEl, gateEl;
+    let cycleIdx = 0, ri = 0, segT = 0;
+    let phase = 'move', phaseT = 0, afterPhase = null, last = 0, raf = 0, poll = 0;
 
+    const kind = () => CYCLE[cycleIdx].kind;
+    const route = () => CYCLE[cycleIdx].wp;
     const active = () => deck.current === IDX && !document.hidden;
-
     function el(tag, attrs, cls) {
         const n = document.createElementNS(NS, tag);
         for (const k in attrs) n.setAttribute(k, attrs[k]);
@@ -1298,8 +1299,6 @@ window.__deck = new DeckPlayer();
         layer = document.createElementNS(NS, 'g');
         layer.setAttribute('class', 'ambient-layer');
         svg.appendChild(layer);
-        el('path', { d: 'M105 74 L231 76 L362 74 L362 140 L270 139 L270 192 L270 244 L270 303 L270 361' }, 'flow');
-        redPath = el('path', { d: 'M270 139 Q 190 140 170 110 Q 150 90 105 74' }, 'flow red');
         stateEl = el('rect', { x: 210, y: 228, width: 120, height: 32, rx: 8 }, 'fstate');
         gateEl = el('circle', { cx: 270, cy: 303, r: 16 }, 'fgate');
         gateEl.style.opacity = 0;
@@ -1314,53 +1313,49 @@ window.__deck = new DeckPlayer();
         const c = el('circle', { cx: r[0] + r[2] / 2, cy: r[1] + r[3] / 2, r: 12 }, 'fpulse');
         setTimeout(() => c.remove(), 750);
     }
-    function setPos(p) { token.setAttribute('cx', p[0]); token.setAttribute('cy', p[1]); }
+    function setPos(pt) { token.setAttribute('cx', pt[0]); token.setAttribute('cy', pt[1]); }
     function setToken(fill) { token.setAttribute('fill', fill); }
-
+    function pause(ms, after) { phase = 'pause'; phaseT = ms; afterPhase = after || null; }
     function arrive(i) {
         nodePulse(i);
-        if (route === GREEN && i === 4 && lap % 3 === 2) {           // 每第 3 圈：报错 → 红色回改
-            route = RED; ri = 0;
-            redPath.classList.add('hot');
-            setToken('#ef4444');
-            return;
-        }
-        if (route === GREEN && i === 6) stateEl.classList.add('on'); // 代码稳定：状态点亮
-        if (route === GREEN && i === 7) {                            // 人判闸口：琥珀停顿一拍
-            gateEl.style.opacity = 1;
+        const onBack = i >= CYCLE[cycleIdx].backFrom;
+        setToken(onBack ? '#ef4444' : '#2563eb');
+        const k = kind();
+        if (k === 'fail1' && i === 4) { ri++; return pause(300); } // 报错判定：停一拍再回改（先推进索引，杜绝折返卡死）
+        if (k === 'fail2' && i === 5) { ri++; return pause(300); } // 校验判定：同上
+        if (k === 'pass' && i === 6) stateEl.classList.add('on');  // 代码稳定：状态点亮
+        if (k === 'pass' && i === 7) {                              // 人判闸口：琥珀停顿（推进索引后再停，杜绝卡死）
             setToken('#f59e0b');
-            phase = 'gatepause'; phaseT = GATE_MS;
-            return;
+            gateEl.style.opacity = 1;
+            ri++;
+            return pause(750, () => { gateEl.style.opacity = 0; setToken('#2563eb'); });
         }
         ri++;
-        if (ri >= route.length - 1) {
-            if (route === GREEN) {                                    // 交付：淡出重生
-                phase = 'respawn'; phaseT = 700;
-                token.setAttribute('opacity', 0);
-                setTimeout(() => stateEl.classList.remove('on'), 500);
-            } else {                                                  // 回改完成：重新入圈
-                route = GREEN; ri = 0; lap++;
-                redPath.classList.remove('hot');
-                setToken('#2563eb');
-                phase = 'respawn'; phaseT = 300;
-                token.setAttribute('opacity', 0);
-            }
+        if (ri >= route().length - 1) endRoute();
+    }
+    function endRoute() {
+        const k = kind();
+        if (k === 'pass') {                                         // 全分支走完 → 交付产出，随后开启新周期
+            phase = 'fade'; phaseT = 900;
+            token.setAttribute('opacity', 0);
+            afterPhase = () => { stateEl.classList.remove('on'); nextRoute(); token.setAttribute('opacity', .95); };
+        } else {                                                    // 打回路线走完：改代码处重启脉冲
+            nodePulse(0);
+            phase = 'pause'; phaseT = 450;
+            afterPhase = () => { nextRoute(); setToken('#2563eb'); };
         }
     }
+    function nextRoute() { cycleIdx = (cycleIdx + 1) % CYCLE.length; ri = 0; segT = 0; }
     function step(dt) {
-        if (phase === 'gatepause') {
+        if (phase === 'pause' || phase === 'fade') {
             phaseT -= dt;
-            if (phaseT <= 0) { gateEl.style.opacity = 0; setToken('#2563eb'); phase = 'move'; }
+            if (phaseT <= 0) { const f = afterPhase; afterPhase = null; phase = 'move'; if (f) f(); }
             return;
         }
-        if (phase === 'respawn') {
-            phaseT -= dt;
-            if (phaseT <= 0) { token.setAttribute('opacity', .95); phase = 'move'; }
-            return;
-        }
-        const A = route[ri], B = route[ri + 1];
+        const wp = route();
+        const A = wp[ri], B = wp[ri + 1];
         const len = Math.hypot(B[0] - A[0], B[1] - A[1]) || 1;
-        segT += (dt / 1000) * SPEED;
+        segT += dt / 1000 * SPEED;
         const k = Math.min(1, segT / len);
         setPos([A[0] + (B[0] - A[0]) * k, A[1] + (B[1] - A[1]) * k]);
         if (k >= 1) { segT = 0; arrive(ri + 1); }
@@ -1377,7 +1372,7 @@ window.__deck = new DeckPlayer();
         if (active()) { if (!layer) build(); last = 0; raf = requestAnimationFrame(frame); }
         else poll = setTimeout(schedule, 400);
     }
-    document.addEventListener('deckpage', schedule);   // 换页/滚动判页时重调度
+    document.addEventListener('deckpage', schedule);
     schedule();
 })();
 
