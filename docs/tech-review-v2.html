@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!-- tech-review deck v2：基于 deck-studio 新框架重建（原文件 tech-review_deck-studio.html 保留不动）。
-     本批：封面（云山品牌皮 + A 型入场）+ 背景页（新版头 + DDLC 定位链 A 型自动连播 + 三区 B 型讲解走查）。
+     本批：封面（云山品牌皮 + A 型入场）+ 背景页（新版头，纯静态——动画待全 deck 定稿后按动画地图统一构建）。
      后续页按确认后的同框架逐页补齐。 -->
 <html lang="zh-CN">
 <head>
@@ -491,9 +491,9 @@ class DeckPlayer {
         if (this.presenting) { this.endPresent(); return; }
         this.mode = 'present'; this.presenting = true; this.endArm = false;
         this.applyMode();
-        this.applyCurrent(this.current);
+        this.show(0);                                        // 从头播放： always 自封面起
         if (this.initProgram) this.initProgram();
-        this.slides[this.current].querySelectorAll('.shown').forEach(el => el.classList.remove('shown'));
+        this.slides[0].querySelectorAll('.shown').forEach(el => el.classList.remove('shown'));
         document.documentElement.requestFullscreen?.().catch(() => {})
         this.flashHint('playerHint', '放映中 · →/单击 逐条推进 · F 退出', 3000);
     }
@@ -506,6 +506,9 @@ class DeckPlayer {
     }
     bindPresent() {
         document.getElementById('presentBtn').addEventListener('click', () => this.togglePresent());
+        document.addEventListener('fullscreenchange', () => {
+            if (!document.fullscreenElement && this.presenting) this.endPresent();   // Esc 退全屏 = 同步退放映
+        });
     }
     bindCursor() {
         this.cursor = document.getElementById('presCursor');
@@ -547,24 +550,9 @@ class DeckPlayer {
         setTimeout(() => el.classList.remove('show'), dur || 2000);
     }
 }
-/* ─── A 型自动连播（页面激活即演，无需点击；reduced-motion 静态） ─── */
-window.DECK_AUTO = {
-  '背景': [
-    ['lit',  [30,32,190,48]],
-    ['move', 222,56, 252,56, 420],
-    ['lit',  [252,26,536,60]],
-    ['move', 788,56, 820,56, 420],
-    ['lit',  [820,32,190,48]],
-  ],
-};
-/* ─── B 型讲解同步（点击步进） ─── */
-window.DECK_STEPS = {
-  '背景': [
-    ['lit', [30,98,480,228]],     // 今天的做法
-    ['lit', [530,98,480,228]],    // 这套方案
-    ['lit', [30,344,980,40]],     // 三条红线
-  ],
-};
+/* ─── 效果声明：本 deck 内容定稿后按动画地图统一构建（当前留空） ───
+   window.DECK_AUTO = { 页label: [微指令...] };   // A 型自动连播
+   window.DECK_STEPS = { 页label: [动作...] };    // B 型讲解同步步进 */
 
 /* ===== 动画步进程序执行器（StepFX）：申报见 animation.md；终态=静态整页 ===== */
 Object.assign(DeckPlayer.prototype, {
