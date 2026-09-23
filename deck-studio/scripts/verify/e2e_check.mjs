@@ -70,44 +70,54 @@ try {
   const sb = await state();
   ok(sb.current === s0.total - 2, `← 回翻到第 ${s0.total - 1} 页（实际 ${sb.current}）`);
 
-  // —— 放映模式：申报程序（DECK_STEPS）优先，回退 reveal 节拍步进 ——
-  console.log('== 放映模式：申报程序 / 节拍步进 ==');
+  // —— 放映模式：F 恒自封面起（产品决策：从头播放），申报程序（DECK_STEPS）优先，回退 reveal 节拍 ——
+  console.log('== 放映模式：自封面起 · 申报程序 / 节拍步进 ==');
   await page.keyboard.press('f');
   await page.waitForTimeout(700);
   let st = await state();
   ok(st.presenting, 'F 进入放映态（body.presenting；全屏被拒时仍应成立）');
+  ok(st.current === 0, `放映恒自封面起（current=${st.current}，与浏览位置无关）`);
   ok(!st.anyVisible, '进页 reveal 收起（第 0 拍空场）');
   const waitIdle = () => page.waitForFunction(() => !window.__deck || !window.__deck.busy, { timeout: 8000 }).catch(() => {});
-  const progClicks = () => page.evaluate(() => {
-    const label = document.querySelector('section.slide.current')?.dataset.label;
-    const prog = (window.DECK_STEPS || {})[label];
+  const curLabel = () => page.evaluate(() => document.querySelector('section.slide.current')?.dataset.label);
+  const progClicks = (label) => page.evaluate(lbl => {
+    const prog = (window.DECK_STEPS || {})[lbl];
     if (!prog) return null;
     return prog.reduce((n, a) => n + (a[0] === 'sumhide' ? 0 : a[0] === 't' ? 1 + a[1].filter(m => m[0] === 'gate').length : 1), 0);
-  });
-  let pc = await progClicks();
-  let beats = pc !== null ? pc : st.revealCount;
-  for (let k = 1; k <= beats + 1; k++) {
-    await page.keyboard.press('ArrowRight');
-    await waitIdle();
-    await page.waitForTimeout(150);
-    st = await state();
-    if (k <= beats) {
-      ok(st.current === s0.total - 2, `第 ${k} 拍仍在当前页（current=${st.current}）`);
-      if (pc === null) {
+  }, label);
+  const pageBeats = async () => {
+    const lbl = await curLabel();
+    const pc = await progClicks(lbl);
+    if (pc !== null) return { beats: pc, mode: 'prog' };
+    return { beats: (await state()).revealCount, mode: 'reveal' };
+  };
+
+  // 逐页走查：每页先放完本页节拍（申报程序或 reveal），再一次翻页，直到末页
+  for (let i = 0; i < s0.total - 1; i++) {
+    const { beats, mode } = await pageBeats();
+    for (let k = 0; k < beats; k++) {
+      await page.keyboard.press('ArrowRight');
+      await waitIdle();
+      await page.waitForTimeout(120);
+      const s = await state();
+      ok(s.current === i, `第 ${i + 1} 页第 ${k + 1} 拍仍在本页（current=${s.current}）`);
+      if (mode === 'reveal') {
         const shown = await page.evaluate(() =>
           [...document.querySelectorAll('section.slide.current .reveal.shown')].length);
-        ok(shown === k, `第 ${k} 拍放出 1 条（已放 ${shown}）`);
-      } else if (k === 1) {
+        ok(shown === k + 1, `第 ${i + 1} 页第 ${k + 1} 拍放出 1 条（已放 ${shown}）`);
+      } else if (k === 0) {
         ok(await page.evaluate(() => !!document.querySelector('section.slide.current .fx-layer')), '申报页巡游启动（fx 层出现）');
       }
-    } else {
-      ok(st.current === s0.total - 1, `节拍放完翻到下一页（current=${st.current}）`);
     }
+    await page.keyboard.press('ArrowRight');
+    await waitIdle();
+    await page.waitForTimeout(200);
+    st = await state();
+    ok(st.current === i + 1, `第 ${i + 1} 页节拍放完翻到第 ${i + 2} 页（current=${st.current}）`);
   }
   // —— 末页行为：节拍放完 → 两次确认结束放映（重复页 bug 回归） ——
   console.log('== 末页结束放映 ==');
-  let lastBeats = await progClicks();
-  if (lastBeats === null) lastBeats = st.revealCount;
+  const lastBeats = await pageBeats();
   for (let k = 0; k < lastBeats; k++) {
     await page.keyboard.press('ArrowRight');
     await waitIdle();
