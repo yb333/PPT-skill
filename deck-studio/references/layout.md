@@ -7,7 +7,7 @@
 内容页 padding `56px 90px`（章扉/问题/金句页 `108px 130px`）：
 
 1. **eyebrow**：mono 小标签 `X.X · 中文 / ENGLISH`，18px，`letter-spacing: .2em`，强调色（`--c-exec`）；
-2. **大标题**：46px（密页可 40–42），font-weight 600–700，`--text`；标题即观点（copywriting.md）；
+2. **大标题**：46px（密页可 40–42），font-weight 600–700，藏青 `--ys-navy`（#16294a，封面夜空同色相）；**核心论点短语可点亮品牌蓝**（`--ys-blue`，≤标题一半，一页一处；无题眼时全藏青）；标题即观点（copywriting.md）；
 3. **导语默认省略**——只有主体成立前必须交代、且标题和正文尚未表达的背景才写，21px `--text-sub`；
 4. **主体**：`flex: 1; min-height: 0`——吃满剩余高度且能收缩，这两个属性是版式不塌的关键。
 
