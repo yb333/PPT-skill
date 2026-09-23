@@ -60,7 +60,7 @@
 <script>
 window.DECK_STEPS = {
   '页label': [
-    ['sumhide', [x,y,w,h]],                                              // 结论条遮盖：程序启动时自动置位（不消耗点击）
+    ['sumhide', [x,y,w,h]],                                              // 结论条遮盖：放映态进页即自动置位（不消耗点击；浏览态恒显）
     ['t', [ ['veil',[x,y,w,h]], ['lit',rect], ['move',x1,y1,x2,y2,ms],
             ['gate',x,y], ['back',x1,y1,x2,y2,ms], ['state',rect] ]],   // 巡游（gate=停顿等确认）
     ['w', [x,y,w,h], [x2,y2,w2,h2]],                                    // 走查（第二个区域=联动）

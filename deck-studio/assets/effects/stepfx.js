@@ -33,11 +33,21 @@ Object.assign(DeckPlayer.prototype, {
         Promise.resolve(this.runAction(a)).then(() => { this.busy = false; });
         return true;
     },
-    /* 换页 / 退出放映时调用：清 fx、重置程序指针（终态不变式） */
+    /* 换页 / 退出放映时调用：清 fx、重置程序指针（终态不变式）。
+       放映态进页即前置 sumhide（结论条从进页就遮住，而非首击才遮——防结论剧透）；
+       浏览态（endPresent 后 presenting=false）不置位，保持静态整页。 */
     initProgram() {
         this.prog = null; this.progLabel = null; this.pi = 0;
         this.tourActive = false; this.tourWait = false; this.tourSkip = false;
         this.clearFx();
+        if (!this.presenting) return;
+        const label = this.slides[this.current].dataset.label;
+        const prog = (window.DECK_STEPS || {})[label];
+        if (!prog) return;
+        this.progLabel = label; this.prog = prog; this.pi = 0;
+        while (this.prog[this.pi] && this.prog[this.pi][0] === 'sumhide') {
+            this.runAction(this.prog[this.pi]); this.pi++;
+        }
     },
     clearFx() {
         if (this.fxRaf) { cancelAnimationFrame(this.fxRaf); this.fxRaf = null; }

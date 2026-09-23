@@ -8,6 +8,7 @@
      window.DECK_AUTO = { 页label: [ 微指令... ] };
      微指令：['lit', [x,y,w,h]]                 区域点亮（viewBox 坐标）
              ['move', x1,y1, x2,y2, dur?]      光点飞行（dur 缺省 500ms）
+             ['wseq', [rect,...]]              多区域逐个连播（每拍 = lit 节奏 420ms）
    依赖：player.js（window.__deck + deckpage 事件）与 stepfx.js（fxLayer/
    fxEl/newToken/wait——本文件在混合层之后装配）。无数据时本模块不装配。
    ===================================================================== */
@@ -46,8 +47,9 @@
             const micros = seq(); if (!micros) return;
             deck.autoBusy = true; skip = false;
             for (const m of micros) {
-                if (skip) { if (m[0] === 'lit') { const fx = deck.fxLayer(); const e = deck.fxEl('rect', { x: m[1][0], y: m[1][1], width: m[1][2], height: m[1][3], rx: 8, class: 'fx-lit' }); e.setAttribute('opacity', 1); } continue; }
+                if (skip) { if (m[0] === 'lit') { const fx = deck.fxLayer(); const e = deck.fxEl('rect', { x: m[1][0], y: m[1][1], width: m[1][2], height: m[1][3], rx: 8, class: 'fx-lit' }); e.setAttribute('opacity', 1); } else if (m[0] === 'wseq') { for (const r of m[1]) { const fx = deck.fxLayer(); if (!fx) break; const e = deck.fxEl('rect', { x: r[0], y: r[1], width: r[2], height: r[3], rx: 8, class: 'fx-lit' }); e.setAttribute('opacity', 1); } } continue; }
                 if (m[0] === 'lit') await lit(m[1]);
+                else if (m[0] === 'wseq') { for (const r of m[1]) await lit(r); }
                 else if (m[0] === 'move') await move(m[1], m[2], m[3], m[4], m[5] || 500);
             }
             deck.autoBusy = false;

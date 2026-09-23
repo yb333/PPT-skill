@@ -1535,11 +1535,21 @@ Object.assign(DeckPlayer.prototype, {
         Promise.resolve(this.runAction(a)).then(() => { this.busy = false; });
         return true;
     },
-    /* 换页 / 退出放映时调用：清 fx、重置程序指针（终态不变式） */
+    /* 换页 / 退出放映时调用：清 fx、重置程序指针（终态不变式）。
+       放映态进页即前置 sumhide（结论条从进页就遮住，而非首击才遮——防结论剧透）；
+       浏览态（endPresent 后 presenting=false）不置位，保持静态整页。 */
     initProgram() {
         this.prog = null; this.progLabel = null; this.pi = 0;
         this.tourActive = false; this.tourWait = false; this.tourSkip = false;
         this.clearFx();
+        if (!this.presenting) return;
+        const label = this.slides[this.current].dataset.label;
+        const prog = (window.DECK_STEPS || {})[label];
+        if (!prog) return;
+        this.progLabel = label; this.prog = prog; this.pi = 0;
+        while (this.prog[this.pi] && this.prog[this.pi][0] === 'sumhide') {
+            this.runAction(this.prog[this.pi]); this.pi++;
+        }
     },
     clearFx() {
         if (this.fxRaf) { cancelAnimationFrame(this.fxRaf); this.fxRaf = null; }
@@ -1709,6 +1719,7 @@ Object.assign(DeckPlayer.prototype, {
      window.DECK_AUTO = { 页label: [ 微指令... ] };
      微指令：['lit', [x,y,w,h]]                 区域点亮（viewBox 坐标）
              ['move', x1,y1, x2,y2, dur?]      光点飞行（dur 缺省 500ms）
+             ['wseq', [rect,...]]              多区域逐个连播（每拍 = lit 节奏 420ms）
    依赖：player.js（window.__deck + deckpage 事件）与 stepfx.js（fxLayer/
    fxEl/newToken/wait——本文件在混合层之后装配）。无数据时本模块不装配。
    ===================================================================== */
@@ -1747,8 +1758,9 @@ Object.assign(DeckPlayer.prototype, {
             const micros = seq(); if (!micros) return;
             deck.autoBusy = true; skip = false;
             for (const m of micros) {
-                if (skip) { if (m[0] === 'lit') { const fx = deck.fxLayer(); const e = deck.fxEl('rect', { x: m[1][0], y: m[1][1], width: m[1][2], height: m[1][3], rx: 8, class: 'fx-lit' }); e.setAttribute('opacity', 1); } continue; }
+                if (skip) { if (m[0] === 'lit') { const fx = deck.fxLayer(); const e = deck.fxEl('rect', { x: m[1][0], y: m[1][1], width: m[1][2], height: m[1][3], rx: 8, class: 'fx-lit' }); e.setAttribute('opacity', 1); } else if (m[0] === 'wseq') { for (const r of m[1]) { const fx = deck.fxLayer(); if (!fx) break; const e = deck.fxEl('rect', { x: r[0], y: r[1], width: r[2], height: r[3], rx: 8, class: 'fx-lit' }); e.setAttribute('opacity', 1); } } continue; }
                 if (m[0] === 'lit') await lit(m[1]);
+                else if (m[0] === 'wseq') { for (const r of m[1]) await lit(r); }
                 else if (m[0] === 'move') await move(m[1], m[2], m[3], m[4], m[5] || 500);
             }
             deck.autoBusy = false;
@@ -1911,13 +1923,51 @@ Object.assign(DeckPlayer.prototype, {
 })();
 
 /* ═══ DECK ENGINE:END ═══ */
-/* ─── 效果声明：本 deck 内容定稿后按动画地图统一构建（当前留空） ───
-   window.DECK_AUTO = { 页label: [微指令...] };   // A 型自动连播
-   window.DECK_STEPS = { 页label: [动作...] };    // B 型讲解同步步进 */
 
-
-
-
+/* ═══════ 动画申报（定稿版动画地图 · 格式见 references/animation.md）═══════
+   原则：动画只属于「过程」与「节奏」；同内容类型同处理；less-is-more。
+   地图：封面=A 型入场(CSS cov-a) · 背景/形态/价值/推广=过程连播 · 校验/分流/协同=序列连播
+        流转=常驻流转(本 deck 唯一 ambient) · 编排/进展=讲解走查 · 五页总结条=结论后置
+   节奏：auto lit 420ms/拍；坐标 = 各页 svg viewBox 坐标。 */
+window.DECK_AUTO = {   /* A 型自动连播：进页即演，无需点击；点击=快进 */
+    '背景': [['lit',[30,32,190,48]],['move',222,56,252,56,420],['lit',[252,26,536,60]],['move',788,56,820,56,420],['lit',[820,32,190,48]]],   // DDLC 定位链
+    '形态': [['lit',[30,26,250,36]],['move',282,44,336,44,500],['lit',[340,26,290,36]],['move',632,44,666,44,500],['lit',[670,26,340,36]]],   // spec 演化链
+    '校验': [['wseq',[[30,32,176,130],[230,32,176,130],[430,32,176,130],[630,32,176,130],[830,32,180,130]]]],                                  // 五道闸顺序连播
+    '分流': [['wseq',[[30,155,150,90],[250,47,240,46],[520,47,170,46],[250,112,240,46],[520,112,170,46],[250,177,240,46],[520,177,170,46],[250,242,240,46],[520,242,170,46],[250,307,240,46],[520,307,170,46]]]], // 判定树逐支
+    '协同': [['wseq',[[30,226,980,30],[30,256,980,30],[30,286,980,30],[30,316,980,30],[30,346,980,30],[30,376,980,30]]]],                       // 平台表逐行
+    '价值': [['lit',[30,70,980,28]],['lit',[30,122,250,28]],['lit',[830,108,180,52]]],                                                          // 周期对比
+    '推广': [['lit',[30,26,280,64]],['move',312,58,344,58,420],['lit',[350,26,280,64]],['move',632,58,664,58,420],['lit',[670,26,340,64]]],    // 推广路径三段
+};
+window.DECK_STEPS = {  /* B 型讲解同步 / 结论后置（sumhide 进页自动遮盖，sumshow 末拍揭示） */
+    '编排': [['w',[30,36,310,176]],['w',[394,40,616,52]],['w',[394,102,616,52]],['w',[394,164,616,52]],['w',[30,226,980,86]]],   // 编排岗→三专业岗→上报路由
+    '进展': [['w',[30,24,313,316]],['w',[363,24,313,316]],['w',[696,24,314,316]]],                                                // 三栏逐栏
+    '形态': [['sumhide',[30,340,980,34]],['sumshow']],
+    '校验': [['sumhide',[30,402,980,32]],['sumshow']],
+    '分流': [['sumhide',[30,402,980,30]],['sumshow']],
+    '价值': [['sumhide',[30,390,980,32]],['sumshow']],
+    '推广': [['sumhide',[30,278,980,34]],['sumshow']],
+};
+window.DECK_AMBIENT = {  /* 常驻流转：流转页活流程——主链巡航，五条打回回路逐一出演，通过交付后呼吸开新周期 */
+    pageLabel: '流转',
+    speed: 200,        /* viewBox 单位/秒：全屏横穿 2~4s，沿线可读标签 */
+    decideMs: 500, gateMs: 950, restMs: 1800,
+    routes: [          /* wp 序号：0 预处理 1 预检 2 设计 3 闸口① 4 建造 5 UT 6 闸口② 7 制品 */
+        { kind: '闸口①打回', backFrom: 4, decide: { at: 3, ms: 950, gate: true, then: 'red' },
+          wp: [[72,118],[174,118],[290,118],[400,118],[400,60],[290,60],[290,118],[290,170],[72,170],[72,118]] },
+        { kind: '闸口②打回', backFrom: 7, decide: { at: 6, ms: 950, gate: true, then: 'red' },
+          wp: [[72,118],[174,118],[290,118],[400,118],[540,118],[710,118],[830,118],[830,60],[540,60],[540,118],[540,170],[72,170],[72,118]] },
+        { kind: 'SQL回coder', backFrom: 6, decide: { at: 5, ms: 500, then: 'red' },
+          wp: [[72,118],[174,118],[290,118],[400,118],[540,118],[710,118],[688,180],[560,180],[560,118],[560,170],[72,170],[72,118]] },
+        { kind: 'DQ回producer', backFrom: 6, decide: { at: 5, ms: 500, then: 'red' },
+          wp: [[72,118],[174,118],[290,118],[400,118],[540,118],[710,118],[710,212],[505,212],[505,118],[505,170],[72,170],[72,118]] },
+        { kind: '数据质量退设计', backFrom: 6, decide: { at: 5, ms: 500, then: 'red' },
+          wp: [[72,118],[174,118],[290,118],[400,118],[540,118],[710,118],[732,152],[732,244],[290,244],[290,118],[290,170],[72,170],[72,118]] },
+        { kind: '通过交付', backFrom: 99, decide: { at: 6, ms: 950, gate: true, then: 'blue' },
+          wp: [[72,118],[174,118],[290,118],[400,118],[540,118],[710,118],[830,118],[936,118]] },
+    ],
+    nodes: {0:[30,84,84,68],1:[132,84,84,68],2:[234,84,112,68],3:[364,84,72,68],4:[454,84,172,68],5:[644,84,132,68],6:[794,84,72,68],7:[884,84,104,68]},
+    stateAt: 7, stateRect: [884,84,104,68],   /* 通过交付时点亮制品节点 */
+};
 
 window.__deck = new DeckPlayer();
 
