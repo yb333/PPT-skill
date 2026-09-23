@@ -26,7 +26,7 @@ catch (error) { console.error(error.message); process.exit(2); }
 const browser = await chromium.launch(chromiumLaunchOptions());
 const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
 const errors = [];
-page.on('pageerror', e => errors.push(e.message));
+page.on('pageerror', e => errors.push(e.message + '  @' + (e.stack || '').split('\n').slice(1, 2).join(' ').trim()));
 page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
 
 try {

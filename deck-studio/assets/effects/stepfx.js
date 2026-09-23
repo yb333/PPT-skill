@@ -60,7 +60,7 @@ Object.assign(DeckPlayer.prototype, {
         const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
         for (const k in attrs) el.setAttribute(k, attrs[k]);
         if (cls) el.setAttribute('class', cls);
-        this.fx.appendChild(el);
+        if (this.fx) this.fx.appendChild(el);   // 无层（页面已切走）时返回游离节点，不致崩溃
         return el;
     },
     wait(ms) { return new Promise(r => setTimeout(r, ms)); },
