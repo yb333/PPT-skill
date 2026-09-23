@@ -75,6 +75,8 @@ HTML 骨架要点：`:root` token 变量区 → 舞台/页/播放器样式 → `
 
 **分段并行策略**：≤10 页单文件一次生成；11–15 页拆 2 段；>15 页拆 3 段（每段 5–7 页）。合并规则：CSS 只留一份 `:root` 去重；SVG `<defs>` 的 gradient/marker id 不冲突；data-label 保持唯一；nav dots 从第 2 页开始、总数=页数-1；JS 只留一个控制器、`totalSlides` 动态计算。
 
+**品牌模板（华为云山）**：用户属于华为云山体系时，封面/结束页直接复制 `assets/templates/yunshan.html`（背景、渐变、双 logo 已内置），只改填写区三处文字（标题/日期/作者）；不要重画这两页。内容页视觉（深蓝/蓝灰/白）与其保持同系。
+
 ## Phase 5: 迭代打磨（机器门禁）
 
 每次修改后**必须**跑溢出门禁（退出码非 0 就修，修完重跑；最多迭代 3 轮仍红则带着输出求助用户）：
@@ -117,6 +119,7 @@ python3 ~/.zcode/skills/deck-studio/scripts/html2pptx/convert.py <deck.html> <ou
 | `references/svg-diagrams.md` | Phase 4 —— 架构图/流程图/图表规范与模板 |
 | `references/animation.md` | Phase 2/4 —— 动画申报制：默认零动画、八机制词表、DECK_STEPS/AMBIENT 声明格式、节奏依据 |
 | `assets/effects/` | Phase 4 —— 动画效果基建（stepfx.js/ambient.js/effects.css），整体嵌入，作者只写数据 |
+| `assets/templates/yunshan.html` | 品牌模板 —— 华为云山联名封面+结束页：复制后只改填写区三处文字（标题/日期/作者），内容页夹在两页之间 |
 | `references/copywriting.md` | Phase 1/2/4 —— 文案规范（中文、标题句式、数字） |
 
 ## 常见故障
