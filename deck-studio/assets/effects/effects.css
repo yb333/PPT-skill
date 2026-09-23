@@ -1,0 +1,25 @@
+/* =====================================================================
+   deck-studio 效果基建 · effects.css
+   步进程序（DECK_STEPS）与常驻流转（AMBIENT）的样式层。
+   用法：整体粘贴到 deck <style> 末尾。作者无需修改本文件；
+   暗色主题适配：覆盖 theme.md 的 --glass-* 与本文的 rgba 色值即可。
+   提取自参考实现 docs/emp/agent-concept_deck-studio.html（已验证）。
+   ===================================================================== */
+
+/* —— 步进程序 fx 层（DECK_STEPS；终态 = 静态整页）—— */
+.fx-layer .fx-veil { fill: #fff; opacity: 0; transition: opacity .45s ease; }
+.fx-layer .fx-veil.on { opacity: .78; }
+.fx-layer .fx-lit { fill: rgba(59,130,246,.3); stroke: rgba(37,99,235,.9); stroke-width: 1.6; }
+.fx-layer .fx-state { fill: rgba(29,78,216,.18); stroke: #1d4ed8; stroke-width: 2; }
+.fx-layer .fx-gate { fill: none; stroke: #f59e0b; stroke-width: 3; animation: fxgate 1s ease-in-out infinite; }
+@keyframes fxgate { 0%,100% { opacity: .3; } 50% { opacity: 1; } }
+.fx-layer .fx-pulse { fill: rgba(239,68,68,.16); stroke: #ef4444; stroke-width: 2; animation: fxpulse .9s ease-out 1 forwards; }
+@keyframes fxpulse { 0% { opacity: .85; } 100% { opacity: 0; } }
+
+/* —— 常驻流转（AMBIENT）—— */
+.ambient-layer .fpulse { fill: none; stroke: var(--c-info, #3b82f6); stroke-width: 2; opacity: 0; transform-box: fill-box; transform-origin: center; animation: fnodep .7s ease-out 1 forwards; }
+@keyframes fnodep { 0% { opacity: .9; transform: scale(.5); } 100% { opacity: 0; transform: scale(1.6); } }
+.ambient-layer .fgate { fill: none; stroke: #f59e0b; stroke-width: 3; animation: fxgate 1s ease-in-out infinite; }
+.ambient-layer .fstate { fill: rgba(29,78,216,.15); stroke: #1d4ed8; stroke-width: 1.5; opacity: 0; transition: opacity .4s ease; }
+.ambient-layer .fstate.on { opacity: 1; }
+.ambient-layer .ftoken { transition: fill .3s ease, opacity .4s ease; }

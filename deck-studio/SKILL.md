@@ -115,7 +115,8 @@ python3 ~/.zcode/skills/deck-studio/scripts/html2pptx/convert.py <deck.html> <ou
 | `references/layout.md` | Phase 4 —— 固定画布排版刻度、卡片语汇、密度、审美硬要求 |
 | `references/player.md` | Phase 4 —— 舞台引擎（浏览=无缝长页 / 放映=节拍步进、缩略图侧栏、聚光灯）标准实现 |
 | `references/svg-diagrams.md` | Phase 4 —— 架构图/流程图/图表规范与模板 |
-| `references/animation.md` | Phase 2/4 —— 动画申报制：默认零动画、七机制词表、DECK_STEPS 声明格式 |
+| `references/animation.md` | Phase 2/4 —— 动画申报制：默认零动画、八机制词表、DECK_STEPS/AMBIENT 声明格式、节奏依据 |
+| `assets/effects/` | Phase 4 —— 动画效果基建（stepfx.js/ambient.js/effects.css），整体嵌入，作者只写数据 |
 | `references/copywriting.md` | Phase 1/2/4 —— 文案规范（中文、标题句式、数字） |
 
 ## 常见故障

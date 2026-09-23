@@ -216,6 +216,7 @@ class DeckPlayer {
 
     applyCurrent(i) { this.slides.forEach((s, k) => s.classList.toggle('current', k === i)); }
     syncChrome() {
+        document.dispatchEvent(new CustomEvent('deckpage'));   // 通知常驻流转等效果层重调度（assets/effects/ambient.js）
         document.getElementById('progressBar').style.width = ((this.current + 1) / this.slides.length * 100) + '%';
         document.getElementById('deckPage').textContent = `${this.current + 1} / ${this.slides.length}`;
         const mp = document.getElementById('deckMenuPage');
@@ -275,9 +276,10 @@ class DeckPlayer {
         this.syncChrome();
     }
 
-    /* 放映：reveal 步进，末页放完 → 两次确认退出；浏览：页级定位 */
+    /* 放映：申报程序优先（见文末「动画步进程序」），回退 reveal 步进；末页放完 → 两次确认退出；浏览：页级定位 */
     step() {
         if (this.presenting) {
+            if (this.programStep && this.programStep()) return;   // DECK_STEPS 申报程序（assets/effects/stepfx.js）
             const hidden = this.slides[this.current].querySelectorAll('.reveal:not(.shown)');
             if (hidden.length) { hidden[0].classList.add('shown'); this.endArm = false; return; }
             if (this.current < this.slides.length - 1) { this.show(this.current + 1); this.endArm = false; return; }
@@ -375,7 +377,7 @@ class DeckPlayer {
     toggleCursor() { /* 同 v2 */ }
     flashHint(id, text, dur) { /* 同 v2 */ }
 }
-new DeckPlayer();
+window.__deck = new DeckPlayer();   // 暴露实例：e2e/效果基建（ambient 等）确定性读取 busy 与状态
 ```
 
 ## 行为要点（改动前必读）
@@ -390,6 +392,8 @@ new DeckPlayer();
 - **工具侧契约**：measure_overflow / shot 注入强制 CSS（stage 静态化 + fit 取缩放与 margin + 页全显 + chrome 隐藏），见脚本内注释。
 
 ## 动画步进程序（DECK_STEPS，可选；申报格式与判据见 animation.md）
+
+**引擎已资产化**：`assets/effects/stepfx.js`（本节程序执行器）、`assets/effects/ambient.js`（常驻流转）、`assets/effects/effects.css`（样式层）——deck 生成时整体粘贴即用，作者只声明数据。
 
 放映态 `step()` 顶部优先调用步进程序，无申报回退 reveal 步进：
 
