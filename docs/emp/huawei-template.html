@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<!-- deck-studio 模板复现：华为云山联名模板 封面 + 结束页（依据 docs/IMG_4930/4931.HEIC 照片复刻布局与配色）。
+     背景为矢量插画复现（零版权风险）；HUAWEI/云山 logo 为商标图形，留占位槽——请从工作文件拖入官方 logo 图。
+     若日后拿到模板原图，将 .bg-art 替换为 <img src="..."> 即可（布局槽位不变）。
+     契约：section.slide[data-label] 1920×1080 舞台画布，player 壳双模式。 -->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>云山模板 · 封面与结束页（deck-studio 复现）</title>
+<style>
+  :root {
+    --c-info: #3b82f6; --c-exec: #2563eb; --c-guard: #60a5fa;
+    --border-card: #e2e8f0; --text: #1e293b; --text-sub: #64748b; --text-faint: #94a3b8;
+    --tpl-navy: #16294a; --tpl-bar: #e9edf3;
+    --ease-out-expo: cubic-bezier(.16,1,.3,1);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; overflow: hidden; }
+  body { background: #e8eaf0; font-family: "PingFang SC", "Microsoft YaHei", -apple-system, sans-serif; color: var(--text); }
+  .deck-stage { position: fixed; inset: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+  .deck-fit { width: 1920px; height: 1080px; flex: 0 0 auto; position: relative; overflow: hidden;
+    background: #fff; box-shadow: 0 12px 48px rgba(15,23,42,.18); border-radius: 8px; transform-origin: center center; }
+  .slide { position: absolute; inset: 0; width: 1920px; height: 1080px; overflow: hidden; background: #fff;
+    visibility: hidden; opacity: 0; transition: opacity .35s ease, visibility 0s linear .35s; }
+  .slide.current { visibility: visible; opacity: 1; transition: opacity .35s ease; }
+  body.browse .deck-stage { display: block; overflow-y: auto; overflow-x: hidden; padding: 16px 0 40px; }
+  body.browse .deck-fit { height: auto; transform-origin: top left; box-shadow: none; border-radius: 0; background: transparent; }
+  body.browse .slide { position: relative; margin-bottom: 24px; border-radius: 8px; box-shadow: 0 10px 32px rgba(15,23,42,.12); }
+
+  /* ===== 封面 ===== */
+  .bg-art { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .cover-title {
+    position: absolute; left: 130px; top: 545px; color: #fff;
+    font-size: 66px; font-weight: 700; letter-spacing: .04em; line-height: 1.2;
+    text-shadow: 0 2px 14px rgba(6,18,40,.45);
+  }
+  .cover-underline {
+    position: absolute; left: 133px; top: 655px; width: 210px; height: 7px; border-radius: 4px;
+    background: linear-gradient(90deg, #63b3ff, #1e6fd9);
+    box-shadow: 0 1px 8px rgba(30,111,217,.6);
+  }
+  .cover-date {
+    position: absolute; left: 133px; top: 705px; color: #eaf1fa;
+    font-size: 25px; font-weight: 500; letter-spacing: .05em;
+    text-shadow: 0 1px 8px rgba(6,18,40,.4);
+  }
+  .tpl-bar {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 92px;
+    background: var(--tpl-bar); display: flex; align-items: center;
+    justify-content: space-between; padding: 0 44px;
+  }
+  .tpl-bar .sec { font-size: 17px; color: #46536b; letter-spacing: .02em; }
+  .logo-slot {
+    display: flex; align-items: center; gap: 14px;
+    border: 1.5px dashed #a8b6c9; border-radius: 10px; padding: 9px 18px;
+    color: #8a97a8; font-size: 15px; background: rgba(255,255,255,.55);
+  }
+  .logo-slot.small { padding: 6px 12px; font-size: 13px; }
+
+  /* ===== 结束页 ===== */
+  .thanks-text {
+    position: absolute; left: 935px; top: 500px;
+    font-size: 96px; font-weight: 700; color: var(--tpl-navy); letter-spacing: .01em;
+  }
+
+  /* ===== 播放器壳（契约类名） ===== */
+  .deck-progress { position: fixed; top: 10px; left: 50%; transform: translateX(-50%); width: min(42vw, 420px); height: 6px;
+    z-index: 100; border-radius: 999px; background: rgba(15,23,42,.08); border: 1px solid var(--border-card); overflow: hidden; }
+  #progressBar { height: 100%; width: 50%; border-radius: 999px; background: linear-gradient(90deg, var(--c-info), var(--c-exec)); transition: width .4s ease; }
+  .deck-bar { position: fixed; top: 14px; left: 16px; z-index: 110; display: flex; align-items: center; gap: 4px;
+    background: rgba(255,255,255,.72); backdrop-filter: blur(12px); border: 1px solid rgba(226,232,240,.9);
+    border-radius: 999px; padding: 6px 8px; box-shadow: 0 4px 16px rgba(15,23,42,.08);
+    font-size: 13px; color: var(--text-sub); }
+  .deck-page { font-variant-numeric: tabular-nums; letter-spacing: .06em; padding: 0 6px; }
+  .deck-menu { border: none; background: transparent; cursor: pointer; font-size: 15px; line-height: 1;
+    color: var(--text-sub); padding: 4px 9px; border-radius: 999px; }
+  .deck-menu:hover { background: rgba(37,99,235,.1); }
+  .deck-present-btn { border: none; cursor: pointer; border-radius: 999px; padding: 6px 14px;
+    background: var(--c-exec); color: #fff; font-size: 13px; font-weight: 600; }
+  .player-hint { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); font-size: 12px;
+    color: var(--text-faint); background: rgba(255,255,255,.9); padding: 6px 16px; border-radius: 20px;
+    border: 1px solid var(--border-card); z-index: 9999; opacity: 0; transition: opacity .3s ease;
+    pointer-events: none; white-space: nowrap; }
+  .player-hint.show { opacity: 1; }
+  body.presenting { cursor: pointer; }
+  body.presenting .deck-bar, body.presenting .deck-progress { opacity: 0; pointer-events: none; }
+</style>
+</head>
+<body class="browse">
+<div class="deck-stage" id="deckStage">
+<div class="deck-fit" id="deckFit">
+
+  <!-- ============ 封面 ============ -->
+  <section class="slide" data-label="封面">
+    <svg class="bg-art" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <defs>
+        <linearGradient id="cvSky" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#0a1c38"/><stop offset=".5" stop-color="#16355e"/><stop offset="1" stop-color="#2c517f"/>
+        </linearGradient>
+        <linearGradient id="cvFar" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#5d7ba6"/><stop offset="1" stop-color="#33517c"/>
+        </linearGradient>
+        <linearGradient id="cvMain" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#415e8b"/><stop offset="1" stop-color="#243e66"/>
+        </linearGradient>
+        <linearGradient id="cvFog" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#dfe9f4" stop-opacity="0"/><stop offset=".55" stop-color="#dfe9f4" stop-opacity=".38"/><stop offset="1" stop-color="#e6edf6" stop-opacity=".88"/>
+        </linearGradient>
+        <filter id="soft" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="55"/></filter>
+      </defs>
+      <rect width="1920" height="1080" fill="url(#cvSky)"/>
+      <!-- 远山脊 -->
+      <path d="M0 560 L150 512 L280 542 L430 468 L570 502 L710 438 L870 478 L1030 378 L1190 328 L1330 298 L1490 330 L1630 288 L1790 328 L1920 306 L1920 1080 L0 1080 Z" fill="url(#cvFar)"/>
+      <path d="M1010 392 L1030 378 L1052 396 L1030 404 Z M1310 312 L1330 298 L1352 318 L1330 326 Z M1610 300 L1630 288 L1652 306 L1630 314 Z" fill="#d6e3f2" opacity=".5"/>
+      <!-- 主山脊（近） -->
+      <path d="M0 645 L130 612 L310 632 L530 558 L710 590 L910 518 L1085 428 L1205 308 L1268 292 L1345 342 L1425 425 L1570 382 L1710 432 L1920 378 L1920 1080 L0 1080 Z" fill="url(#cvMain)"/>
+      <path d="M1192 322 L1268 292 L1312 336 L1240 352 Z M1058 446 L1085 428 L1112 452 L1080 462 Z M1552 394 L1570 382 L1592 402 L1566 410 Z" fill="#e6eef8" opacity=".78"/>
+      <!-- 雾海 -->
+      <rect x="0" y="540" width="1920" height="540" fill="url(#cvFog)"/>
+      <ellipse cx="620" cy="880" rx="720" ry="170" fill="#e8eff7" opacity=".38" filter="url(#soft)"/>
+      <ellipse cx="1520" cy="960" rx="820" ry="210" fill="#e8eff7" opacity=".46" filter="url(#soft)"/>
+      <ellipse cx="1050" cy="780" rx="520" ry="120" fill="#dce7f3" opacity=".3" filter="url(#soft)"/>
+    </svg>
+    <div class="cover-title">标题xxxxxxxx</div>
+    <div class="cover-underline"></div>
+    <div class="cover-date">日期：2026.02</div>
+    <div class="tpl-bar">
+      <span class="sec">Security Level:</span>
+      <div class="logo-slot" data-slot="logo">HUAWEI ｜ 云山 &nbsp;LOGO 位（拖入官方 logo 图）</div>
+    </div>
+  </section>
+
+  <!-- ============ 结束页 ============ -->
+  <section class="slide" data-label="结束页">
+    <!-- 左：雪坡照片区（矢量复现） -->
+    <svg class="bg-art" style="right:auto" width="780" height="1080" viewBox="0 0 780 1080" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <defs>
+        <linearGradient id="edSky" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#5d8ec9"/><stop offset=".6" stop-color="#9dbde3"/><stop offset="1" stop-color="#c6d9ee"/>
+        </linearGradient>
+        <linearGradient id="edRock" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#52759f"/><stop offset="1" stop-color="#3c5a86"/>
+        </linearGradient>
+        <linearGradient id="edSnow" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#f6f9fc"/><stop offset="1" stop-color="#dde8f4"/>
+        </linearGradient>
+        <filter id="soft2" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="26"/></filter>
+      </defs>
+      <rect width="780" height="1080" fill="url(#edSky)"/>
+      <ellipse cx="240" cy="150" rx="260" ry="46" fill="#ffffff" opacity=".5" filter="url(#soft2)"/>
+      <ellipse cx="600" cy="90" rx="220" ry="36" fill="#ffffff" opacity=".4" filter="url(#soft2)"/>
+      <!-- 远山 -->
+      <path d="M0 470 L110 400 L220 448 L340 372 L470 430 L600 356 L720 408 L780 380 L780 1080 L0 1080 Z" fill="#93afd4"/>
+      <!-- 主岩峰群 + 雪面 -->
+      <path d="M0 640 L90 520 L170 470 L260 520 L330 452 L420 520 L500 470 L590 540 L660 500 L740 560 L780 540 L780 1080 L0 1080 Z" fill="url(#edRock)"/>
+      <path d="M150 492 L170 470 L192 492 L170 502 Z M315 478 L330 452 L352 478 L330 490 Z M485 492 L500 470 L520 494 L500 502 Z M648 518 L660 500 L676 518 L660 526 Z" fill="#eef5fb" opacity=".85"/>
+      <path d="M0 700 L130 660 L260 680 L390 640 L520 668 L650 636 L780 668 L780 1080 L0 1080 Z" fill="#6d8db8" opacity=".8"/>
+      <!-- 前景雪坡（对角线） -->
+      <path d="M0 760 L200 820 L420 900 L640 980 L780 1040 L780 1080 L0 1080 Z" fill="url(#edSnow)"/>
+      <path d="M0 830 L180 880 L360 944" fill="none" stroke="#c9d9ea" stroke-width="3" opacity=".7"/>
+      <path d="M60 900 L240 956 L430 1020" fill="none" stroke="#cfdfee" stroke-width="2.4" opacity=".6"/>
+      <!-- 登山者（原照片细节） -->
+      <g fill="#2f3b4d">
+        <rect x="424" y="944" width="5" height="13" rx="2"/>
+        <rect x="447" y="957" width="4.5" height="11" rx="2"/>
+      </g>
+      <circle cx="426.5" cy="941" r="3" fill="#8a3b3b"/>
+      <circle cx="449" cy="954.5" r="2.6" fill="#8a3b3b"/>
+    </svg>
+    <!-- 右：浅色区 + Thank You -->
+    <div style="position:absolute;inset:0 0 0 780px;background:linear-gradient(180deg,#f4f6f9,#eceff4)"></div>
+    <div class="thanks-text">Thank You</div>
+    <div class="logo-slot small" style="position:absolute;right:44px;bottom:34px" data-slot="logo">HUAWEI ｜ 云山 LOGO 位</div>
+  </section>
+
+</div>
+</div>
+
+<div class="deck-progress"><div id="progressBar"></div></div>
+<header class="deck-bar">
+  <button class="deck-menu" id="deckMenu" title="页面目录">☰</button>
+  <span class="deck-page" id="deckPage">1 / 2</span>
+  <button class="deck-present-btn" id="presentBtn" title="放映模式 (F)">▶ 放映</button>
+</header>
+<div class="player-hint" id="playerHint">←→ 定位 · F 放映</div>
+
+<script>
+const DECK_GAP = 24;
+class DeckPlayer {
+    constructor() {
+        this.stageEl = document.getElementById('deckStage');
+        this.fitEl = document.getElementById('deckFit');
+        this.slides = [...this.fitEl.querySelectorAll('section.slide')];
+        this.current = 0; this.mode = 'browse'; this.presenting = false;
+        this.endArm = false; this.scale = 1; this.scrollRaf = null;
+        this.applyMode(); this.applyCurrent(0); this.syncChrome();
+        addEventListener('resize', () => this.fit());
+        this.bindKeys(); this.bindScroll(); this.bindClick(); this.bindPresent();
+        document.getElementById('deckMenu').addEventListener('click', () => this.toggleToc());
+        this.flashHint('playerHint', '←→ 定位 · F 放映', 3500);
+    }
+    pitch() { return 1080 * this.scale + DECK_GAP; }
+    fit() {
+        this.scale = Math.min(innerWidth / 1920, innerHeight / 1080);
+        this.fitEl.style.transform = `scale(${this.scale})`;
+        if (this.mode === 'browse') {
+            this.fitEl.style.transformOrigin = 'top left';
+            this.fitEl.style.marginLeft = Math.max(0, (innerWidth - 1920 * this.scale) / 2) + 'px';
+            const flowH = this.slides.length * 1080 + (this.slides.length - 1) * DECK_GAP;
+            this.fitEl.style.marginBottom = (flowH * this.scale - flowH) + 'px';
+            this.stageEl.scrollTop = this.current * this.pitch();
+        } else {
+            this.fitEl.style.transformOrigin = 'center center';
+            this.fitEl.style.marginLeft = '';
+            this.fitEl.style.marginBottom = '';
+        }
+    }
+    applyMode() {
+        document.body.classList.toggle('browse', this.mode === 'browse');
+        document.body.classList.toggle('presenting', this.mode === 'present');
+        this.fit();
+        if (this.mode === 'browse') this.stageEl.scrollTop = this.current * this.pitch();
+    }
+    applyCurrent(i) { this.slides.forEach((s, k) => s.classList.toggle('current', k === i)); }
+    syncChrome() {
+        document.dispatchEvent(new CustomEvent('deckpage'));
+        document.getElementById('progressBar').style.width = ((this.current + 1) / this.slides.length * 100) + '%';
+        document.getElementById('deckPage').textContent = `${this.current + 1} / ${this.slides.length}`;
+    }
+    show(i) {
+        i = Math.max(0, Math.min(this.slides.length - 1, i));
+        if (this.mode === 'present') {
+            if (i === this.current && this.slides[i].classList.contains('current')) return;
+            this.current = i;
+            this.applyCurrent(i);
+        } else {
+            this.current = i;
+            this.stageEl.scrollTo({ top: i * this.pitch(), behavior: 'smooth' });
+        }
+        this.syncChrome();
+    }
+    step() {
+        if (this.presenting) {
+            if (this.current < this.slides.length - 1) { this.show(this.current + 1); this.endArm = false; return; }
+            if (!this.endArm) { this.endArm = true; this.flashHint('playerHint', '已是最后一页 · 再按一次结束放映', 2600); return; }
+            this.endArm = false; this.endPresent(); this.flashHint('playerHint', '放映结束', 2200); return;
+        }
+        if (this.current < this.slides.length - 1) { this.show(this.current + 1); this.endArm = false; }
+        else this.flashHint('playerHint', '已是最后一页', 1800);
+    }
+    bindKeys() {
+        document.addEventListener('keydown', e => {
+            if (/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+            if (e.key === 'f' || e.key === 'F') { this.togglePresent(); return; }
+            if (['ArrowRight','ArrowDown','PageDown',' '].includes(e.key)) { e.preventDefault(); this.step(); }
+            else if (['ArrowLeft','ArrowUp','PageUp'].includes(e.key)) { e.preventDefault(); this.show(this.current - 1); }
+            else if (e.key === 'Home') { e.preventDefault(); this.show(0); }
+            else if (e.key === 'End') { e.preventDefault(); this.show(this.slides.length - 1); }
+        });
+    }
+    bindWheel() {
+        addEventListener('wheel', e => {
+            if (!this.presenting || e.ctrlKey || e.metaKey) return;
+            e.preventDefault(); this.step();
+        }, { passive: false });
+    }
+    bindScroll() {
+        this.stageEl.addEventListener('scroll', () => {
+            if (this.mode !== 'browse' || this.scrollRaf) return;
+            this.scrollRaf = requestAnimationFrame(() => {
+                this.scrollRaf = null;
+                const i = Math.max(0, Math.min(this.slides.length - 1, Math.round(this.stageEl.scrollTop / this.pitch())));
+                if (i !== this.current) { this.current = i; this.applyCurrent(i); this.syncChrome(); }
+            });
+        }, { passive: true });
+    }
+    bindClick() {
+        document.addEventListener('click', e => {
+            if (!this.presenting) return;
+            if (e.target.closest('a,button,input,textarea,select,.deck-bar,.nav-dots')) return;
+            this.step();
+        });
+    }
+    togglePresent() {
+        if (this.presenting) { this.endPresent(); return; }
+        this.mode = 'present'; this.presenting = true; this.endArm = false;
+        this.applyMode(); this.applyCurrent(this.current);
+        document.documentElement.requestFullscreen?.().catch(() => {});
+        this.flashHint('playerHint', '放映中 · →/单击 推进 · F 退出', 3000);
+    }
+    endPresent() {
+        this.mode = 'browse'; this.presenting = false; this.endArm = false;
+        document.body.classList.remove('presenting');
+        if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+        this.applyMode();
+    }
+    bindPresent() {
+        document.getElementById('presentBtn').addEventListener('click', () => this.togglePresent());
+        document.addEventListener('fullscreenchange', () => {
+            if (!document.fullscreenElement && this.presenting) {
+                this.presenting = false; this.mode = 'browse';
+                document.body.classList.remove('presenting'); this.applyMode();
+            }
+        });
+    }
+    flashHint(id, text, dur) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.textContent = text; el.classList.add('show');
+        setTimeout(() => el.classList.remove('show'), dur || 2000);
+    }
+}
+window.__deck = new DeckPlayer();
+</script>
+</body>
+</html>
