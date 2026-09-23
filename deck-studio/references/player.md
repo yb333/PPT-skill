@@ -397,7 +397,7 @@ window.__deck = new DeckPlayer();   // 暴露实例：e2e/效果基建（ambient
 
 ## 动画步进程序（DECK_STEPS，可选；申报格式与判据见 animation.md）
 
-**引擎已资产化**：`assets/effects/stepfx.js`（本节程序执行器）、`assets/effects/ambient.js`（常驻流转）、`assets/effects/effects.css`（样式层）——deck 生成时整体粘贴即用，作者只声明数据。
+**引擎唯一源（纪律）**：`assets/effects/` 四件套——`player.js`（DeckPlayer 核心类，本文件全篇的标准实现）、`stepfx.js`（步进程序执行器）、`auto.js`（A 型自动连播调度器）、`ambient.js`（常驻流转）+ `effects.css`（样式层）。deck 生成时**由模板带出或运行 `node deck-studio/scripts/sync-engine.mjs` 写入** `═══ DECK ENGINE:BEGIN/END ═══` 标记块；**严禁在 deck 内手改引擎块**（历史事故：8 份手拷贝双向漂移，Esc 修复只覆盖到 3/8）。改引擎一律改四件套源文件再同步全量 deck；`sync-engine.mjs --check` 是门禁（块内容比对 + 块外 DeckPlayer 拷贝漂移探测）。作者只写数据声明：`window.DECK_STEPS` / `window.DECK_AUTO` / `window.DECK_AMBIENT`（格式见 animation.md），不声明 = 零动画，引擎完全惰性。
 
 放映态 `step()` 顶部优先调用步进程序，无申报回退 reveal 步进：
 

@@ -106,7 +106,7 @@ try {
           [...document.querySelectorAll('section.slide.current .reveal.shown')].length);
         ok(shown === k + 1, `第 ${i + 1} 页第 ${k + 1} 拍放出 1 条（已放 ${shown}）`);
       } else if (k === 0) {
-        ok(await page.evaluate(() => !!document.querySelector('section.slide.current .fx-layer')), '申报页巡游启动（fx 层出现）');
+        ok(await page.evaluate(() => !!window.__deck.prog), '申报程序已装载（deck.prog 就绪）');
       }
     }
     await page.keyboard.press('ArrowRight');
@@ -117,20 +117,34 @@ try {
   }
   // —— 末页行为：节拍放完 → 两次确认结束放映（重复页 bug 回归） ——
   console.log('== 末页结束放映 ==');
-  const lastBeats = await pageBeats();
+  const { beats: lastBeats, mode: lastMode } = await pageBeats();
   for (let k = 0; k < lastBeats; k++) {
     await page.keyboard.press('ArrowRight');
     await waitIdle();
     await page.waitForTimeout(120);
+    const s = await state();
+    ok(s.current === s0.total - 1, `末页第 ${k + 1} 拍仍在末页（current=${s.current}）`);
+    if (lastMode === 'reveal') {
+      const shown = await page.evaluate(() =>
+        [...document.querySelectorAll('section.slide.current .reveal.shown')].length);
+      ok(shown === k + 1, `末页第 ${k + 1} 拍放出（已放 ${shown}/${lastBeats}）`);
+    }
   }
   const stLast = await state();
   ok(stLast.presenting && stLast.current === s0.total - 1, '末页节拍放完仍在末页');
-  ok(lastBeats === 0 || stLast.revealCount === 0 || stLast.anyVisible, '末页内容保持放出（未被重置）');
+  // reveal 淡入 ~400ms：等过渡收敛再断言可见性（固定 120ms 会读到半程透明度）
+  if (lastBeats > 0 && stLast.revealCount > 0) {
+    await page.waitForFunction(() => {
+      const els = [...document.querySelectorAll('section.slide.current .reveal')];
+      return els.every(el => parseFloat(getComputedStyle(el).opacity) > 0.9);
+    }, { timeout: 3000 }).catch(() => {});
+  }
+  ok(lastBeats === 0 || stLast.revealCount === 0 || (await state()).anyVisible, '末页内容保持放出（未被重置）');
   await page.keyboard.press('ArrowRight');
   await page.waitForTimeout(400);
   ok(await page.evaluate(() => document.body.classList.contains('presenting')), '第一次 →：武装提示，不误退、不重复');
   await page.keyboard.press('ArrowRight');
-  await page.waitForTimeout(500);
+  await page.waitForFunction(() => !document.body.classList.contains('presenting'), { timeout: 5000 }).catch(() => {});
   ok(!(await page.evaluate(() => document.body.classList.contains('presenting'))), '第二次 →：结束放映');
   st = await state();
   ok(st.current === s0.total - 1, `结束后停在最后一页（current=${st.current}）`);

@@ -18,9 +18,8 @@
 
 | 资产 | 作用 | 作者要写的 |
 |------|------|-----------|
-| `assets/effects/effects.css` | fx 高亮/闸口环/脉冲/常驻流转的全部样式 | 无（整体粘贴） |
-| `assets/effects/stepfx.js` | 步进程序执行器（分块/走查联动/脉冲/巡游含闸门停顿） | 无（整体粘贴）+ `window.DECK_STEPS` 数据 |
-| `assets/effects/ambient.js` | 常驻流转控制器（闭环内容活流程） | 无（整体粘贴）+ 参数区数据 |
+| `assets/effects/effects.css` | fx 高亮/闸口环/脉冲/常驻流转的全部样式 | 无（标记块由 sync-engine 写入） |
+| `assets/effects/player.js` 等 JS 四件 | 核心类/步进/自动连播/常驻流转，deck 内 ═══ DECK ENGINE ═══ 标记块 | 无（严禁手改）+ `DECK_STEPS`/`DECK_AUTO`/`DECK_AMBIENT` 数据声明 |
 | `references/player.md` | 播放器壳（浏览/放映双模式、缩略图、聚光灯） | 无（照 player.md 实现） |
 
 **作者的三样输入**：
@@ -91,7 +90,7 @@ window.DECK_STEPS = {
 
 1. **生成期**：内容页**纯静态**生成，零效果资产嵌入；spec 阶段完成**动画地图**申报（意图前置——画图时为路线留好结构，但不构建）；
 2. **多轮修改**：只改内容，动画零负担；
-3. **定稿后动画构建**（独立工序）：整体粘贴 `assets/effects/` 三件 + 填 `DECK_STEPS`/AMBIENT 数据 + 跑门禁/e2e。内容后续小改不动动画；结构大改才同步声明数据。
+3. **定稿后动画构建**（独立工序）：`node deck-studio/scripts/sync-engine.mjs` 写入引擎标记块 + 填 `DECK_STEPS`/`DECK_AUTO`/`DECK_AMBIENT` 数据 + 跑门禁/e2e。内容后续小改不动动画；结构大改才同步声明数据。
 
 （依据：多轮讨论期构建动画是纯损耗——每次内容变更都牵连动画返工；资产化+数据驱动让动画构建成为定稿后的半日的轻工序。）
 
@@ -123,7 +122,7 @@ window.DECK_STEPS = {
 
 ## 六、作者接口 2：AMBIENT 参数区（常驻流转）
 
-仅限**闭环/迭代**内容，每 deck 至多一处。整体粘贴 `ambient.js` 后只改参数区：`PAGE_LABEL`、`SPEED`、`DECIDE_MS`、`GATE_MS`、`REST_MS`、`ROUTES`（回路路线按演示顺序，`backFrom` 标打回段、`decide` 声明判定停顿与转向）、`NODES`、`STATE_AT/STATE_RECT`。完整格式见文件内注释。红线：离页必停（已内置）、reduced-motion 静态（已内置）、禁止循环闪烁装饰。
+仅限**闭环/迭代**内容，每 deck 至多一处。引擎在标记块内（勿改），作者只声明 `window.DECK_AMBIENT` 数据：`pageLabel`、`speed`、`decideMs`、`gateMs`、`restMs`、`routes`（回路路线按演示顺序，`backFrom` 标打回段、`decide` 声明判定停顿与转向）、`nodes`、`stateAt`/`stateRect`。完整格式见文件内注释。红线：离页必停（已内置）、reduced-motion 静态（已内置）、禁止循环闪烁装饰。
 
 ## 七、语义参数（动画参数就是语义参数）
 

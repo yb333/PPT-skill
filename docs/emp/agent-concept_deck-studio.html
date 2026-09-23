@@ -825,227 +825,7 @@ body.presenting .deck-progress, body.presenting .deck-sidebar { opacity: 0; poin
 
 <script>
 const DECK_GAP = 24;
-class DeckPlayer {
-    constructor() {
-        this.stageEl = document.getElementById('deckStage');
-        this.fitEl = document.getElementById('deckFit');
-        this.slides = [...this.fitEl.querySelectorAll('section.slide')];
-        this.current = 0; this.mode = 'browse'; this.presenting = false; this.cursorOn = false;
-        this.endArm = false; this.scale = 1;
-        this.wheelAcc = 0; this.wheelQuiet = null; this.scrollRaf = null;
-        this.hideTimer = null; this.rafId = null;
-        this.mx = -200; this.my = -200; this.cx = -200; this.cy = -200;
-        this.buildThumbs(); this.applyMode(); this.applyCurrent(0); this.syncChrome();
-        addEventListener('resize', () => this.fit());
-        this.bindKeys(); this.bindWheel(); this.bindScroll(); this.bindClick(); this.bindPresent(); this.bindCursor();
-        document.getElementById('deckMenu').addEventListener('click', () => this.toggleToc());
-        document.getElementById('tocClose').addEventListener('click', () => this.closeToc());
-        this.flashHint('playerHint', '滚动浏览 · ←→ 定位 · F 放映 · P 聚光灯', 4000);
-    }
-    pitch() { return 1080 * this.scale + DECK_GAP; }
-    fit() {
-        this.scale = Math.min(innerWidth / 1920, innerHeight / 1080);
-        this.fitEl.style.transform = `scale(${this.scale})`;
-        if (this.mode === 'browse') {
-            this.fitEl.style.transformOrigin = 'top left';
-            this.fitEl.style.marginLeft = Math.max(0, (innerWidth - 1920 * this.scale) / 2) + 'px';
-            const flowH = this.slides.length * 1080 + (this.slides.length - 1) * DECK_GAP;
-            this.fitEl.style.marginBottom = (flowH * this.scale - flowH) + 'px';
-            this.stageEl.scrollTop = this.current * this.pitch();
-        } else {
-            this.fitEl.style.transformOrigin = 'center center';
-            this.fitEl.style.marginLeft = '';
-            this.fitEl.style.marginBottom = '';
-        }
-    }
-    applyMode() {
-        document.body.classList.toggle('browse', this.mode === 'browse');
-        document.body.classList.toggle('presenting', this.mode === 'present');
-        this.fit();
-        if (this.mode === 'browse') this.stageEl.scrollTop = this.current * this.pitch();
-    }
-    applyCurrent(i) { this.slides.forEach((s, k) => s.classList.toggle('current', k === i)); }
-    syncChrome() {
-        document.dispatchEvent(new CustomEvent('deckpage'));
-        document.getElementById('progressBar').style.width = ((this.current + 1) / this.slides.length * 100) + '%';
-        document.getElementById('deckPage').textContent = `${this.current + 1} / ${this.slides.length}`;
-        this.thumbs?.forEach((t, k) => t.classList.toggle('active', k === this.current));
-    }
-    buildThumbs() {
-        const wrap = document.getElementById('deckThumbs');
-        this.thumbs = this.slides.map((s, i) => {
-            const item = document.createElement('div');
-            item.className = 'thumb-item';
-            const clone = s.cloneNode(true);
-            clone.classList.remove('slide');
-            clone.classList.add('thumb-page');
-            clone.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
-            const box = document.createElement('div');
-            box.className = 'thumb-box';
-            const inner = document.createElement('div');
-            inner.className = 'thumb-inner';
-            inner.appendChild(clone);
-            box.appendChild(inner);
-            const label = document.createElement('div');
-            label.className = 'thumb-label';
-            label.textContent = `${i + 1}. ${s.dataset.label || ''}`;
-            item.append(box, label);
-            item.addEventListener('click', () => this.show(i));   // 跳页但保持侧栏打开，便于连续预览
-            wrap.appendChild(item);
-            return item;
-        });
-    }
-    toggleToc() {
-        const sb = document.getElementById('deckSidebar');
-        sb.classList.toggle('open');
-        if (sb.classList.contains('open')) this.thumbs[this.current]?.scrollIntoView({ block: 'nearest' });
-        this.thumbs.forEach((t, k) => t.classList.toggle('active', k === this.current));
-    }
-    closeToc() { document.getElementById('deckSidebar').classList.remove('open'); }
-    show(i) {
-        i = Math.max(0, Math.min(this.slides.length - 1, i));
-        if (this.mode === 'present') {
-            if (i === this.current && this.slides[i].classList.contains('current')) return;
-            this.current = i;
-            this.applyCurrent(i);
-            if (this.initProgram) this.initProgram();
-            if (this.presenting) this.slides[i].querySelectorAll('.shown').forEach(e => e.classList.remove('shown'));
-        } else {
-            this.current = i;
-            this.stageEl.scrollTo({ top: i * this.pitch(), behavior: 'smooth' });
-        }
-        this.syncChrome();
-    }
-    step() {
-        if (this.presenting) {
-            if (this.programStep && this.programStep()) return;  // 申报程序优先（animation.md）
-            const hidden = this.slides[this.current].querySelectorAll('.reveal:not(.shown)');
-            if (hidden.length) { hidden[0].classList.add('shown'); this.endArm = false; return; }
-            if (this.current < this.slides.length - 1) { this.show(this.current + 1); this.endArm = false; return; }
-            if (!this.endArm) { this.endArm = true; this.flashHint('playerHint', '已是最后一页 · 再按一次结束放映', 2600); return; }
-            this.endArm = false;
-            this.endPresent();
-            this.flashHint('playerHint', '放映结束', 2200);
-            return;
-        }
-        if (this.current < this.slides.length - 1) { this.show(this.current + 1); this.endArm = false; }
-        else this.flashHint('playerHint', '已是最后一页', 1800);
-    }
-    back() {
-        this.endArm = false;
-        if (this.presenting) {
-            const shown = this.slides[this.current].querySelectorAll('.shown');
-            if (shown.length) { shown[shown.length - 1].classList.remove('shown'); return; }
-            if (this.current > 0) { this.show(this.current - 1); return; }
-            this.flashHint('playerHint', '已是第一页', 1800);
-            return;
-        }
-        if (this.current > 0) this.show(this.current - 1);
-        else this.flashHint('playerHint', '已是第一页', 1800);
-    }
-    bindKeys() {
-        document.addEventListener('keydown', e => {
-            if (/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
-            if (e.key === 'Escape') { this.closeToc(); return; }
-            if (e.key === 'f' || e.key === 'F') { this.togglePresent(); return; }
-            if (e.key === 'p' || e.key === 'P') { this.toggleCursor(); return; }
-            if (['ArrowRight','ArrowDown','PageDown',' '].includes(e.key)) { e.preventDefault(); this.step(); }
-            else if (['ArrowLeft','ArrowUp','PageUp'].includes(e.key)) { e.preventDefault(); this.back(); }
-            else if (e.key === 'Home') { e.preventDefault(); this.show(0); }
-            else if (e.key === 'End') { e.preventDefault(); this.show(this.slides.length - 1); }
-        });
-    }
-    bindWheel() {
-        addEventListener('wheel', e => {
-            if (!this.presenting || e.ctrlKey || e.metaKey) return;
-            e.preventDefault();
-            clearTimeout(this.wheelQuiet);
-            this.wheelAcc += e.deltaY;
-            this.wheelQuiet = setTimeout(() => {
-                if (Math.abs(this.wheelAcc) >= 48) this.wheelAcc > 0 ? this.step() : this.back();
-                this.wheelAcc = 0;
-            }, 180);
-        }, { passive: false });
-    }
-    bindScroll() {
-        this.stageEl.addEventListener('scroll', () => {
-            if (this.mode !== 'browse' || this.scrollRaf) return;
-            this.scrollRaf = requestAnimationFrame(() => {
-                this.scrollRaf = null;
-                const i = Math.max(0, Math.min(this.slides.length - 1, Math.round(this.stageEl.scrollTop / this.pitch())));
-                if (i !== this.current) { this.current = i; this.applyCurrent(i); this.syncChrome(); }
-            });
-        }, { passive: true });
-    }
-    bindClick() {
-        document.addEventListener('click', e => {
-            const sb = document.getElementById('deckSidebar');
-            if (sb?.classList.contains('open') && !e.target.closest('.deck-sidebar, .deck-menu')) { this.closeToc(); return; } // 点侧栏外即关闭
-            if (!this.presenting) return;
-            if (e.target.closest('a,button,input,textarea,select,.deck-bar,.deck-menu,.nav-dots,.deck-sidebar')) return;
-            this.step();
-        });
-    }
-    togglePresent() {
-        if (this.presenting) { this.endPresent(); return; }
-        this.mode = 'present'; this.presenting = true; this.endArm = false;
-        this.applyMode();
-        this.applyCurrent(this.current);
-        if (this.initProgram) this.initProgram();
-        this.slides[this.current].querySelectorAll('.shown').forEach(el => el.classList.remove('shown'));
-        document.documentElement.requestFullscreen?.().catch(() => {})
-        this.flashHint('playerHint', '放映中 · →/单击 逐条推进 · F 退出', 3000);
-    }
-    endPresent() {
-        this.mode = 'browse'; this.presenting = false; this.endArm = false;
-        document.body.classList.remove('presenting');
-        if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
-        this.applyMode();
-        if (this.initProgram) this.initProgram();
-    }
-    bindPresent() {
-        document.getElementById('presentBtn').addEventListener('click', () => this.togglePresent());
-    }
-    bindCursor() {
-        this.cursor = document.getElementById('presCursor');
-        document.addEventListener('mousemove', e => {
-            this.mx = e.clientX; this.my = e.clientY;
-            if (!this.cursorOn) return;
-            this.cursor.classList.add('active');
-            this.cursor.classList.remove('fading');
-            clearTimeout(this.hideTimer);
-            this.hideTimer = setTimeout(() => this.cursor.classList.add('fading'), 2000);
-        });
-    }
-    toggleCursor() {
-        this.cursorOn = !this.cursorOn;
-        if (this.cursorOn) {
-            document.body.style.cursor = 'none';
-            this.cursor.classList.add('active');
-            this.cursor.classList.remove('fading');
-            this.rafId = requestAnimationFrame(() => this.cursorLoop());
-            this.flashHint('presCursorHint', '演示光标已开启 · 按 P 关闭', 2000);
-        } else {
-            document.body.style.cursor = '';
-            this.cursor.classList.remove('active', 'fading');
-            cancelAnimationFrame(this.rafId);
-            this.flashHint('presCursorHint', '演示光标已关闭', 1500);
-        }
-    }
-    cursorLoop() {
-        this.cx += (this.mx - this.cx) * .25;
-        this.cy += (this.my - this.cy) * .25;
-        this.cursor.style.left = this.cx + 'px';
-        this.cursor.style.top = this.cy + 'px';
-        if (this.cursorOn) this.rafId = requestAnimationFrame(() => this.cursorLoop());
-    }
-    flashHint(id, text, dur) {
-        const el = document.getElementById(id);
-        if (!el) return;
-        el.textContent = text; el.classList.add('show');
-        setTimeout(() => el.classList.remove('show'), dur || 2000);
-    }
-}
+
 const DECK_STEPS_DATA = {
   '形态': [
     ['sumhide', [25,408,990,42]],
@@ -1114,20 +894,299 @@ const DECK_STEPS_DATA = {
   ],
 };
 
-/* ===== 动画步进程序执行器（StepFX）：申报见 animation.md；终态=静态整页 ===== */
+/* ─── 常驻流转（机制页活流程）数据声明：引擎在标记块内，格式见 references/animation.md ─── */
+window.DECK_AMBIENT = {
+    pageLabel: '机制',
+    speed: 200,        // 光点速度（单位/秒）：追踪舒适区下限——回路沿线需读节点标签
+    decideMs: 500,     // 判定菱形停留：识读"报错?/校验过?"标签 ≥400ms
+    gateMs: 950,       // 人判闸口：语义是"等人"，停留需明显长于判定
+    restMs: 1800,      // 整周期交付后的呼吸停顿
+    routes: [
+        { kind: 'fail1', backFrom: 4, decide: { at: 4, ms: 500, then: 'red' },
+          wp: [[105,74],[231,76],[362,74],[362,140],[270,139],[190,118],[105,74]] },
+        { kind: 'fail2', backFrom: 5, decide: { at: 5, ms: 500, then: 'red' },
+          wp: [[105,74],[231,76],[362,74],[362,140],[270,139],[270,192],[160,168],[105,74]] },
+        { kind: 'fail3', backFrom: 8, decide: { at: 7, ms: 950, gate: true, then: 'red' },
+          wp: [[105,74],[231,76],[362,74],[362,140],[270,139],[270,192],[270,244],[270,303],[400,303],[400,80],[160,80],[105,74]] },
+        { kind: 'pass', backFrom: 99, decide: { at: 7, ms: 950, gate: true, then: 'blue' },
+          wp: [[105,74],[231,76],[362,74],[362,140],[270,139],[270,192],[270,244],[270,303],[270,361]] },
+    ],
+    nodes: {0:[50,50,110,48],1:[188,56,86,40],2:[302,50,120,48],3:[318,120,88,40],4:[250,124,40,30],5:[235,178,70,28],6:[210,228,120,32],7:[200,282,140,42],8:[215,346,110,30]},
+    stateAt: 6, stateRect: [210, 228, 120, 32],
+};
+
+/* ═══ DECK ENGINE:BEGIN — 唯一源 deck-studio/assets/effects/ 四件套，勿手改；同步: node deck-studio/scripts/sync-engine.mjs ═══ */
+
+/* =====================================================================
+   deck-studio 效果基建 · player.js — DeckPlayer 核心类（唯一源）
+   ---------------------------------------------------------------------
+   本文件是所有 deck 引擎的唯一源；deck 内的引擎块由 scripts/sync-engine.mjs
+   从 assets/effects/ 四件套（player.js + stepfx.js + auto.js + ambient.js）
+   生成，标记为 ═══ DECK ENGINE:BEGIN/END ═══。改引擎一律改这里再同步，
+   严禁在 deck 内手改引擎块（历史事故：8 份手拷贝双向漂移）。
+
+   player 壳 DOM 契约（完整标记见模板 assets/templates/yunshan.html）：
+     必需  #deckStage > #deckFit > section.slide×N（每页 data-label 必填）
+     必需  #deckBar：#progressBar #deckPage #presentBtn #deckMenu
+     可选  #deckSidebar > #deckThumbs + #tocClose（缩略图目录）
+     可选  #presCursor / #presCursorHint（聚光灯光标，无则 P 键不启用）
+     可选  #playerHint / #presCursorHint（提示条，flashHint 已判空）
+   配置（deck 数据区声明，引擎只读）：
+     const DECK_GAP = 24            页间隙，缺省 24
+   混合层（stepfx.js/auto.js/ambient.js）依赖：window.__deck、syncChrome
+   内派发 deckpage 事件、data-label 页标识。本文件声明版本号供门禁断言。
+   ===================================================================== */
+window.DECK_ENGINE_VERSION = '1.0.0';
+
+class DeckPlayer {
+    constructor() {
+        this.stageEl = document.getElementById('deckStage');
+        this.fitEl = document.getElementById('deckFit');
+        this.slides = [...this.fitEl.querySelectorAll('section.slide')];
+        this.current = 0; this.mode = 'browse'; this.presenting = false; this.cursorOn = false;
+        this.endArm = false; this.scale = 1;
+        this.wheelAcc = 0; this.wheelQuiet = null; this.scrollRaf = null;
+        this.hideTimer = null; this.rafId = null;
+        this.mx = -200; this.my = -200; this.cx = -200; this.cy = -200;
+        this.buildThumbs(); this.applyMode(); this.applyCurrent(0); this.syncChrome();
+        addEventListener('resize', () => this.fit());
+        this.bindKeys(); this.bindWheel(); this.bindScroll(); this.bindClick(); this.bindPresent();
+        if (document.getElementById('presCursor')) this.bindCursor();   // 聚光灯是可选件
+        document.getElementById('deckMenu')?.addEventListener('click', () => this.toggleToc());
+        document.getElementById('tocClose')?.addEventListener('click', () => this.closeToc());
+        this.flashHint('playerHint', this.bootHint(), 4000);
+    }
+    bootHint() {
+        const parts = ['滚动浏览 · ←→ 定位', 'F 放映'];
+        if (document.getElementById('presCursor')) parts.push('P 聚光灯');
+        return parts.join(' · ');
+    }
+    gap() { return (typeof DECK_GAP !== 'undefined' && Number.isFinite(DECK_GAP)) ? DECK_GAP : 24; }
+    pitch() { return 1080 * this.scale + this.gap(); }
+    fit() {
+        this.scale = Math.min(innerWidth / 1920, innerHeight / 1080);
+        this.fitEl.style.transform = `scale(${this.scale})`;
+        if (this.mode === 'browse') {
+            this.fitEl.style.transformOrigin = 'top left';
+            this.fitEl.style.marginLeft = Math.max(0, (innerWidth - 1920 * this.scale) / 2) + 'px';
+            const flowH = this.slides.length * 1080 + (this.slides.length - 1) * this.gap();
+            this.fitEl.style.marginBottom = (flowH * this.scale - flowH) + 'px';
+            this.stageEl.scrollTop = this.current * this.pitch();
+        } else {
+            this.fitEl.style.transformOrigin = 'center center';
+            this.fitEl.style.marginLeft = '';
+            this.fitEl.style.marginBottom = '';
+        }
+    }
+    applyMode() {
+        document.body.classList.toggle('browse', this.mode === 'browse');
+        document.body.classList.toggle('presenting', this.mode === 'present');
+        this.fit();
+        if (this.mode === 'browse') this.stageEl.scrollTop = this.current * this.pitch();
+    }
+    applyCurrent(i) { this.slides.forEach((s, k) => s.classList.toggle('current', k === i)); }
+    syncChrome() {
+        document.dispatchEvent(new CustomEvent('deckpage'));
+        const pb = document.getElementById('progressBar');
+        if (pb) pb.style.width = ((this.current + 1) / this.slides.length * 100) + '%';
+        const pg = document.getElementById('deckPage');
+        if (pg) pg.textContent = `${this.current + 1} / ${this.slides.length}`;
+        this.thumbs?.forEach((t, k) => t.classList.toggle('active', k === this.current));
+    }
+    buildThumbs() {
+        const wrap = document.getElementById('deckThumbs');
+        if (!wrap) { this.thumbs = []; return; }
+        this.thumbs = this.slides.map((s, i) => {
+            const item = document.createElement('div');
+            item.className = 'thumb-item';
+            const clone = s.cloneNode(true);
+            clone.classList.remove('slide');
+            clone.classList.add('thumb-page');
+            clone.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
+            const box = document.createElement('div');
+            box.className = 'thumb-box';
+            const inner = document.createElement('div');
+            inner.className = 'thumb-inner';
+            inner.appendChild(clone);
+            box.appendChild(inner);
+            const label = document.createElement('div');
+            label.className = 'thumb-label';
+            label.textContent = `${i + 1}. ${s.dataset.label || ''}`;
+            item.append(box, label);
+            item.addEventListener('click', () => this.show(i));   // 跳页但保持侧栏打开，便于连续预览
+            wrap.appendChild(item);
+            return item;
+        });
+    }
+    toggleToc() {
+        const sb = document.getElementById('deckSidebar');
+        if (!sb || !this.thumbs?.length) return;
+        sb.classList.toggle('open');
+        if (sb.classList.contains('open')) this.thumbs[this.current]?.scrollIntoView({ block: 'nearest' });
+        this.thumbs.forEach((t, k) => t.classList.toggle('active', k === this.current));
+    }
+    closeToc() { document.getElementById('deckSidebar')?.classList.remove('open'); }
+    show(i) {
+        i = Math.max(0, Math.min(this.slides.length - 1, i));
+        if (this.mode === 'present') {
+            if (i === this.current && this.slides[i].classList.contains('current')) return;
+            this.current = i;
+            this.applyCurrent(i);
+            if (this.initProgram) this.initProgram();
+            if (this.presenting) this.slides[i].querySelectorAll('.shown').forEach(e => e.classList.remove('shown'));
+        } else {
+            this.current = i;
+            this.stageEl.scrollTo({ top: i * this.pitch(), behavior: 'smooth' });
+        }
+        this.syncChrome();
+    }
+    step() {
+        if (this.presenting) {
+            if (this.programStep && this.programStep()) return;  // 申报程序优先（animation.md）
+            const hidden = this.slides[this.current].querySelectorAll('.reveal:not(.shown)');
+            if (hidden.length) { hidden[0].classList.add('shown'); this.endArm = false; return; }
+            if (this.current < this.slides.length - 1) { this.show(this.current + 1); this.endArm = false; return; }
+            if (!this.endArm) { this.endArm = true; this.flashHint('playerHint', '已是最后一页 · 再按一次结束放映', 2600); return; }
+            this.endArm = false;
+            this.endPresent();
+            this.flashHint('playerHint', '放映结束', 2200);
+            return;
+        }
+        if (this.current < this.slides.length - 1) { this.show(this.current + 1); this.endArm = false; }
+        else this.flashHint('playerHint', '已是最后一页', 1800);
+    }
+    back() {
+        this.endArm = false;
+        if (this.presenting) {
+            const shown = this.slides[this.current].querySelectorAll('.shown');
+            if (shown.length) { shown[shown.length - 1].classList.remove('shown'); return; }
+            if (this.current > 0) { this.show(this.current - 1); return; }
+            this.flashHint('playerHint', '已是第一页', 1800);
+            return;
+        }
+        if (this.current > 0) this.show(this.current - 1);
+        else this.flashHint('playerHint', '已是第一页', 1800);
+    }
+    bindKeys() {
+        document.addEventListener('keydown', e => {
+            if (/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+            if (e.key === 'Escape') { this.closeToc(); return; }
+            if (e.key === 'f' || e.key === 'F') { this.togglePresent(); return; }
+            if ((e.key === 'p' || e.key === 'P') && document.getElementById('presCursor')) { this.toggleCursor(); return; }
+            if (['ArrowRight','ArrowDown','PageDown',' '].includes(e.key)) { e.preventDefault(); this.step(); }
+            else if (['ArrowLeft','ArrowUp','PageUp'].includes(e.key)) { e.preventDefault(); this.back(); }
+            else if (e.key === 'Home') { e.preventDefault(); this.show(0); }
+            else if (e.key === 'End') { e.preventDefault(); this.show(this.slides.length - 1); }
+        });
+    }
+    bindWheel() {
+        addEventListener('wheel', e => {
+            if (!this.presenting || e.ctrlKey || e.metaKey) return;
+            e.preventDefault();
+            clearTimeout(this.wheelQuiet);
+            this.wheelAcc += e.deltaY;
+            this.wheelQuiet = setTimeout(() => {
+                if (Math.abs(this.wheelAcc) >= 48) this.wheelAcc > 0 ? this.step() : this.back();
+                this.wheelAcc = 0;
+            }, 180);
+        }, { passive: false });
+    }
+    bindScroll() {
+        this.stageEl.addEventListener('scroll', () => {
+            if (this.mode !== 'browse' || this.scrollRaf) return;
+            this.scrollRaf = requestAnimationFrame(() => {
+                this.scrollRaf = null;
+                const i = Math.max(0, Math.min(this.slides.length - 1, Math.round(this.stageEl.scrollTop / this.pitch())));
+                if (i !== this.current) { this.current = i; this.applyCurrent(i); this.syncChrome(); }
+            });
+        }, { passive: true });
+    }
+    bindClick() {
+        document.addEventListener('click', e => {
+            const sb = document.getElementById('deckSidebar');
+            if (sb?.classList.contains('open') && !e.target.closest('.deck-sidebar, .deck-menu')) { this.closeToc(); return; } // 点侧栏外即关闭
+            if (!this.presenting) return;
+            if (e.target.closest('a,button,input,textarea,select,.deck-bar,.deck-menu,.nav-dots,.deck-sidebar')) return;
+            this.step();
+        });
+    }
+    togglePresent() {
+        if (this.presenting) { this.endPresent(); return; }
+        this.mode = 'present'; this.presenting = true; this.endArm = false;
+        this.applyMode();
+        this.show(0);                                        // 从头播放：恒自封面起
+        if (this.initProgram) this.initProgram();
+        this.slides[0].querySelectorAll('.shown').forEach(el => el.classList.remove('shown'));
+        document.documentElement.requestFullscreen?.().catch(() => {})
+        this.flashHint('playerHint', '放映中 · →/单击 逐条推进 · F 退出', 3000);
+    }
+    endPresent() {
+        this.mode = 'browse'; this.presenting = false; this.endArm = false;
+        document.body.classList.remove('presenting');
+        if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+        this.applyMode();
+        if (this.initProgram) this.initProgram();
+    }
+    bindPresent() {
+        document.getElementById('presentBtn')?.addEventListener('click', () => this.togglePresent());
+        document.addEventListener('fullscreenchange', () => {
+            if (!document.fullscreenElement && this.presenting) this.endPresent();   // Esc 退全屏 = 同步退放映
+        });
+    }
+    bindCursor() {
+        this.cursor = document.getElementById('presCursor');
+        document.addEventListener('mousemove', e => {
+            this.mx = e.clientX; this.my = e.clientY;
+            if (!this.cursorOn) return;
+            this.cursor.classList.add('active');
+            this.cursor.classList.remove('fading');
+            clearTimeout(this.hideTimer);
+            this.hideTimer = setTimeout(() => this.cursor.classList.add('fading'), 2000);
+        });
+    }
+    toggleCursor() {
+        this.cursorOn = !this.cursorOn;
+        if (this.cursorOn) {
+            document.body.style.cursor = 'none';
+            this.cursor.classList.add('active');
+            this.cursor.classList.remove('fading');
+            this.rafId = requestAnimationFrame(() => this.cursorLoop());
+            this.flashHint('presCursorHint', '演示光标已开启 · 按 P 关闭', 2000);
+        } else {
+            document.body.style.cursor = '';
+            this.cursor.classList.remove('active', 'fading');
+            cancelAnimationFrame(this.rafId);
+            this.flashHint('presCursorHint', '演示光标已关闭', 1500);
+        }
+    }
+    cursorLoop() {
+        this.cx += (this.mx - this.cx) * .25;
+        this.cy += (this.my - this.cy) * .25;
+        this.cursor.style.left = this.cx + 'px';
+        this.cursor.style.top = this.cy + 'px';
+        if (this.cursorOn) this.rafId = requestAnimationFrame(() => this.cursorLoop());
+    }
+    flashHint(id, text, dur) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.textContent = text; el.classList.add('show');
+        setTimeout(() => el.classList.remove('show'), dur || 2000);
+    }
+}
+
+/* =====================================================================
+   deck-studio 效果基建 · stepfx.js
+   步进程序（DECK_STEPS）执行器：分块 / 走查联动 / 脉冲 / 巡游（含闸门停顿）。
+   用法：
+     1. 前置：player 壳（DeckPlayer 类 + window.__deck + syncChrome 内派发 deckpage 事件）
+     2. 本文件整体粘贴到 deck 脚本内、`new DeckPlayer()` 之后（mixin 挂到原型）
+     3. 作者只声明 window.DECK_STEPS 数据（格式见 references/animation.md），不改引擎
+   提取自参考实现 docs/emp/agent-concept_deck-studio.html（已验证）。
+   工程警告：fx 元素缓存属性勿与方法同名（fxToken 属性/方法冲突曾致巡游卡死，令名 newToken）。
+   ===================================================================== */
 Object.assign(DeckPlayer.prototype, {
-    initProgram() {
-        this.prog = null; this.progLabel = null; this.pi = 0;
-        this.tourActive = false; this.tourWait = false; this.tourSkip = false;
-        this.clearFx();
-    },
-    clearFx() {
-        if (this.fxRaf) { cancelAnimationFrame(this.fxRaf); this.fxRaf = null; }
-        if (this.fx) this.fx.remove();
-        this.fx = null; this.fxSvg = null; this.fxToken = null; this.fxVeilEl = null;
-        this.walkEl = null; this.walkEl2 = null; this.gateRing = null;
-        this.gateEl = null; this.sumCoverEl = null; this.seqSkip = false;
-    },
+    /* 放映态 step() 顶部必须先调用本钩子（返回 true = 本次点击已被程序消费）：
+       if (this.programStep && this.programStep()) return;                              */
     programStep() {
         if (this.tourWait) { const r = this.tourResolve; this.tourWait = false; this.busy = true; if (r) r(); return true; }
         if (this.tourActive) { this.tourSkip = true; return true; }
@@ -1150,6 +1209,18 @@ Object.assign(DeckPlayer.prototype, {
         Promise.resolve(this.runAction(a)).then(() => { this.busy = false; });
         return true;
     },
+    /* 换页 / 退出放映时调用：清 fx、重置程序指针（终态不变式） */
+    initProgram() {
+        this.prog = null; this.progLabel = null; this.pi = 0;
+        this.tourActive = false; this.tourWait = false; this.tourSkip = false;
+        this.clearFx();
+    },
+    clearFx() {
+        if (this.fxRaf) { cancelAnimationFrame(this.fxRaf); this.fxRaf = null; }
+        if (this.fx) this.fx.remove();
+        this.fx = null; this.fxSvg = null; this.fxToken = null; this.fxVeilEl = null;
+        this.walkEl = null; this.walkEl2 = null; this.gateEl = null; this.sumCoverEl = null; this.seqSkip = false;
+    },
     fxLayer() {
         const svg = this.slides[this.current].querySelector('svg');
         if (!svg) return null;
@@ -1165,7 +1236,7 @@ Object.assign(DeckPlayer.prototype, {
         const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
         for (const k in attrs) el.setAttribute(k, attrs[k]);
         if (cls) el.setAttribute('class', cls);
-        this.fx.appendChild(el);
+        if (this.fx) this.fx.appendChild(el);   // 无层（页面已切走）时返回游离节点，不致崩溃
         return el;
     },
     wait(ms) { return new Promise(r => setTimeout(r, ms)); },
@@ -1174,7 +1245,7 @@ Object.assign(DeckPlayer.prototype, {
         if (!fx) return;
         const kind = a[0];
         if (kind === 't') return this.runTour(a[1]);
-        if (kind === 'w') {
+        if (kind === 'w') {                                   // 走查（多区域 = 联动），上次自动退回
             if (this.walkEl) this.walkEl.remove();
             if (this.walkEl2) this.walkEl2.remove();
             const r = a[1];
@@ -1183,19 +1254,25 @@ Object.assign(DeckPlayer.prototype, {
             await this.wait(140);
             return;
         }
-        if (kind === 'pulse') {
+        if (kind === 'c') {                                   // 分块：将 .reveal 元素标记为已放出
+            for (let i = 1; i < a.length; i++)
+                document.querySelectorAll(a[i]).forEach(el => el.classList.add('shown'));
+            await this.wait(140);
+            return;
+        }
+        if (kind === 'pulse') {                               // 一次性点名脉冲
             const r = a[1];
             const el = this.fxEl('rect', { x: r[0], y: r[1], width: r[2], height: r[3], rx: 10, class: 'fx-pulse' });
             await this.wait(950);
             el.remove();
             return;
         }
-        if (kind === 'sumhide') {                                // 结论条遮盖（自动置位，不消耗点击）
+        if (kind === 'sumhide') {                             // 结论条遮盖（自动置位）
             const r = a[1];
             this.sumCoverEl = this.fxEl('rect', { x: r[0], y: r[1], width: r[2], height: r[3], class: 'fx-sumcover on' });
             return;
         }
-        if (kind === 'sumshow') {                                // 结论揭示（末拍）
+        if (kind === 'sumshow') {                             // 结论揭示（末拍）
             if (this.sumCoverEl) {
                 this.sumCoverEl.classList.remove('on');
                 await this.wait(520);
@@ -1203,7 +1280,7 @@ Object.assign(DeckPlayer.prototype, {
             }
             return;
         }
-        if (kind === 'wseq') {                                   // 自动连播走查：逐个点亮，点击=全部立即点亮
+        if (kind === 'wseq') {                                // 自动连播走查：逐个点亮，点击=全部立即点亮
             const els = a[1].map(r => this.fxEl('rect', { x: r[0], y: r[1], width: r[2], height: r[3], rx: 8, class: 'fx-lit', opacity: 0 }));
             const iv = a[2] || 900;
             for (let i = 0; i < els.length; i++) {
@@ -1223,7 +1300,7 @@ Object.assign(DeckPlayer.prototype, {
                 case 'lit': this.fxGlow(m[1], 'fx-lit'); await this.wait(160); break;
                 case 'state': this.fxGlow(m[1], 'fx-state'); await this.wait(160); break;
                 case 'move': await this.fly(m[1], m[2], m[3], m[4], m[5] || 550, '#2563eb'); break;
-                case 'move2': await this.fly2(m[1], m[2], m[3], m[4], m[5], m[6] || 700); break;
+                case 'move2': await this.fly2(m[1], m[2], m[3], m[4], m[5], m[6], m[7] || 700); break;
                 case 'back': await this.fly(m[1], m[2], m[3], m[4], m[5] || 480, '#ef4444'); break;
                 case 'pulse': { const el = this.fxEl('rect', { x: m[1][0], y: m[1][1], width: m[1][2], height: m[1][3], rx: 10, class: 'fx-pulse' }); await this.wait(900); el.remove(); break; }
                 case 'gate': if (this.tourSkip) break; await this.waitGate(m[1], m[2]); break;
@@ -1265,7 +1342,7 @@ Object.assign(DeckPlayer.prototype, {
             this.fxRaf = requestAnimationFrame(tick);
         });
     },
-    fly2(ax, ay, bx, by, tx, ty, dur) {
+    fly2(ax, ay, bx, by, tx, ty, dur) {                      // 双光点汇合（并行语义）
         return new Promise(res => {
             const ta = this.fxEl('circle', { r: 8, fill: '#f59e0b', opacity: .95, stroke: '#fff', 'stroke-width': 2 });
             const tb = this.fxEl('circle', { r: 8, fill: '#f59e0b', opacity: .95, stroke: '#fff', 'stroke-width': 2 });
@@ -1281,12 +1358,12 @@ Object.assign(DeckPlayer.prototype, {
             this.fxRaf = requestAnimationFrame(tick);
         });
     },
-    waitGate(x, y) {
-        this.gateRing = this.fxEl('circle', { cx: x, cy: y, r: 16, class: 'fx-gate' });
+    waitGate(x, y) {                                         // 闸口：语义性暂停（点击=确认），先推进路由索引
+        this.gateEl = this.fxEl('circle', { cx: x, cy: y, r: 16 }, 'fx-gate');
         this.flashHint('playerHint', '单击确认，继续', 1600);
         this.tourWait = true;
         this.busy = false;
-        return new Promise(res => { this.tourResolve = () => { if (this.gateRing) { this.gateRing.remove(); this.gateRing = null; } res(); }; });
+        return new Promise(res => { this.tourResolve = () => { if (this.gateEl) { this.gateEl.remove(); this.gateEl = null; } res(); }; });
     },
     async endTour() {
         if (this.fxVeilEl) { this.fxVeilEl.classList.remove('on'); await this.wait(450); }
@@ -1296,137 +1373,221 @@ Object.assign(DeckPlayer.prototype, {
     },
 });
 
-const DECK_STEPS = DECK_STEPS_DATA;
-window.DECK_STEPS = DECK_STEPS;
-window.__deck = new DeckPlayer();
-
-/* ===== 常驻流转试点 v3：机制页活流程 —— 每周期走完全部回路（报错回改→校验回改→人判语义回改→通过交付），
-   交付后呼吸停顿再开新周期。节奏依据：平滑追踪舒适区 ~30°/s 视角（3m 观看/2.5m 宽幕 ≈ 全屏 2~4s 横穿）、
-   节点识读 ≥400ms、闸口语义停留 ~1s；无叠加线条（原图有线，动画只动光点）；
-   离页自动暂停；reduced-motion 静态 ===== */
+/* =====================================================================
+   deck-studio 效果基建 · auto.js — A 型自动连播调度器（唯一源）
+   ---------------------------------------------------------------------
+   A 型触发（animation.md）：过程自解释的内容（流水线/主干/融合巡游），
+   页面激活即演一遍（浏览/放映皆演），无需点击；点击=快进当前序列；
+   prefers-reduced-motion 静态；每页每次进入只演一遍，离页再来重演。
+   作者只声明数据（deck 数据区，勿改本文件）：
+     window.DECK_AUTO = { 页label: [ 微指令... ] };
+     微指令：['lit', [x,y,w,h]]                 区域点亮（viewBox 坐标）
+             ['move', x1,y1, x2,y2, dur?]      光点飞行（dur 缺省 500ms）
+   依赖：player.js（window.__deck + deckpage 事件）与 stepfx.js（fxLayer/
+   fxEl/newToken/wait——本文件在混合层之后装配）。无数据时本模块不装配。
+   ===================================================================== */
 (function () {
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    const deck = window.__deck;
-    const IDX = deck.slides.findIndex(s => s.dataset.label === '机制');
-    if (IDX < 0) return;
-    const SPEED = 200;      // 光点速度（单位/秒）：追踪舒适区下限——回路沿线需读节点标签
-    const DECIDE_MS = 500;  // 判定菱形停留：识读"报错?/校验过?"标签 ≥400ms
-    const GATE_MS = 950;    // 人判闸口：语义是"等人"，停留需明显长于判定
-    const REST_MS = 1800;   // 整周期交付后的呼吸停顿
-    const ROUTES = [
-        { kind: 'fail1', backFrom: 4, decide: { at: 4, ms: DECIDE_MS, then: 'red' },
-          wp: [[105,74],[231,76],[362,74],[362,140],[270,139],[190,118],[105,74]] },
-        { kind: 'fail2', backFrom: 5, decide: { at: 5, ms: DECIDE_MS, then: 'red' },
-          wp: [[105,74],[231,76],[362,74],[362,140],[270,139],[270,192],[160,168],[105,74]] },
-        { kind: 'fail3', backFrom: 8, decide: { at: 7, ms: GATE_MS, gate: true, then: 'red' },
-          wp: [[105,74],[231,76],[362,74],[362,140],[270,139],[270,192],[270,244],[270,303],[400,303],[400,80],[160,80],[105,74]] },
-        { kind: 'pass', backFrom: 99, decide: { at: 7, ms: GATE_MS, gate: true, then: 'blue' },
-          wp: [[105,74],[231,76],[362,74],[362,140],[270,139],[270,192],[270,244],[270,303],[270,361]] },
-    ];
-    const NODES = {0:[50,50,110,48],1:[188,56,86,40],2:[302,50,120,48],3:[318,120,88,40],4:[250,124,40,30],5:[235,178,70,28],6:[210,228,120,32],7:[200,282,140,42],8:[215,346,110,30]};
-    const NS = 'http://www.w3.org/2000/svg';
-    let layer, token, stateEl, gateEl;
-    let cycleIdx = 0, ri = 0, segT = 0;
-    let phase = 'move', phaseT = 0, afterPhase = null, last = 0, raf = 0, poll = 0;
-
-    const kind = () => ROUTES[cycleIdx].kind;
-    const route = () => ROUTES[cycleIdx].wp;
-    const active = () => deck.current === IDX && !document.hidden;
-    function el(tag, attrs, cls) {
-        const n = document.createElementNS(NS, tag);
-        for (const k in attrs) n.setAttribute(k, attrs[k]);
-        if (cls) n.setAttribute('class', cls);
-        layer.appendChild(n);
-        return n;
-    }
-    function build() {
-        const svg = deck.slides[IDX].querySelector('svg');
-        layer = document.createElementNS(NS, 'g');
-        layer.setAttribute('class', 'ambient-layer');
-        svg.appendChild(layer);
-        stateEl = el('rect', { x: 210, y: 228, width: 120, height: 32, rx: 8 }, 'fstate');
-        token = el('circle', { cx: 105, cy: 74, r: 8 }, 'ftoken');
-        token.setAttribute('fill', '#2563eb');
-        token.setAttribute('stroke', '#fff');
-        token.setAttribute('stroke-width', 2);
-    }
-    function nodePulse(i) {
-        const r = NODES[i];
-        if (!r) return;
-        const c = el('circle', { cx: r[0] + r[2] / 2, cy: r[1] + r[3] / 2, r: 12 }, 'fpulse');
-        setTimeout(() => c.remove(), 750);
-    }
-    function setPos(pt) { token.setAttribute('cx', pt[0]); token.setAttribute('cy', pt[1]); }
-    function setToken(fill) { token.setAttribute('fill', fill); }
-    function pause(ms, after) { phase = 'pause'; phaseT = ms; afterPhase = after || null; }
-    function arrive(i) {
-        nodePulse(i);
-        const R = ROUTES[cycleIdx];
-        setToken(i >= R.backFrom ? '#ef4444' : '#2563eb');
-        const SIDE = {1:[530,250,466,18], 3:[530,276,466,18], 5:[530,300,466,18]};   // 接点①②③ → 右侧清单行联动
-        if (SIDE[i] && i < R.backFrom) {   // 仅前进方向联动（打回段不点亮清单）
-            const r = SIDE[i];
-            const c = el('rect', { x: r[0], y: r[1], width: r[2], height: r[3], rx: 6, class: 'fsidep' });
-            setTimeout(() => c.remove(), 850);
+    const boot = () => {
+        const deck = window.__deck;
+        if (!deck) return;
+        let playedFor = null, skip = false, raf = 0;
+        const seq = () => (window.DECK_AUTO || {})[deck.slides[deck.current].dataset.label];
+        function lit(rect) {
+            const fx = deck.fxLayer();
+            if (!fx || !deck.slides[deck.current].querySelector('svg')) return Promise.resolve();
+            const e = deck.fxEl('rect', { x: rect[0], y: rect[1], width: rect[2], height: rect[3], rx: 8, class: 'fx-lit auto' });
+            e.setAttribute('opacity', 0);
+            requestAnimationFrame(() => { e.style.transition = 'opacity .4s ease'; e.style.opacity = 1; });
+            return deck.wait(420);
         }
-        const d = R.decide;
-        if (d && i === d.at) {                                     // 判定停顿：先推进索引再停（杜绝折返卡死）
-            setToken(d.gate ? '#f59e0b' : '#ef4444');
-            if (!gateEl) gateEl = el('circle', { cx: 270, cy: 303, r: 16 }, 'fgate');
-            gateEl.style.opacity = 1;
-            ri++;
-            return pause(d.ms, () => {
-                if (gateEl) { gateEl.remove(); gateEl = null; }    // 移除元素（内联 opacity 压不过无限动画）
-                if (d.then === 'red') { setToken('#ef4444'); stateEl.classList.remove('on'); }
-                else setToken('#2563eb');
+        function move(x1, y1, x2, y2, dur) {
+            return new Promise(res => {
+                if (!deck.slides[deck.current].querySelector('svg')) return res();
+                const token = deck.newToken('#2563eb');
+                const t0 = performance.now();
+                const tick = now => {
+                    if (skip) { token.setAttribute('cx', x2); token.setAttribute('cy', y2); return res(); }
+                    const k = Math.min(1, (now - t0) / dur);
+                    const e = 1 - Math.pow(1 - k, 3);
+                    token.setAttribute('cx', x1 + (x2 - x1) * e);
+                    token.setAttribute('cy', y1 + (y2 - y1) * e);
+                    if (k < 1) raf = requestAnimationFrame(tick); else res();
+                };
+                raf = requestAnimationFrame(tick);
             });
         }
-        if (kind() === 'pass' && i === 6) stateEl.classList.add('on');
-        ri++;
-        if (ri >= R.wp.length - 1) endRoute();
-    }
-    function endRoute() {
-        const k = kind();
-        if (k === 'pass') {                                         // 全回路走完 → 交付产出，休息后开新周期
-            phase = 'rest'; phaseT = REST_MS;
-            token.setAttribute('opacity', 0);
-            afterPhase = () => { stateEl.classList.remove('on'); nextRoute(); token.setAttribute('opacity', .95); };
-        } else {                                                    // 打回路线走完：改代码处重启脉冲
-            nodePulse(0);
-            phase = 'pause'; phaseT = 450;
-            afterPhase = () => { nextRoute(); setToken('#2563eb'); };
+        async function run() {
+            const micros = seq(); if (!micros) return;
+            deck.autoBusy = true; skip = false;
+            for (const m of micros) {
+                if (skip) { if (m[0] === 'lit') { const fx = deck.fxLayer(); const e = deck.fxEl('rect', { x: m[1][0], y: m[1][1], width: m[1][2], height: m[1][3], rx: 8, class: 'fx-lit' }); e.setAttribute('opacity', 1); } continue; }
+                if (m[0] === 'lit') await lit(m[1]);
+                else if (m[0] === 'move') await move(m[1], m[2], m[3], m[4], m[5] || 500);
+            }
+            deck.autoBusy = false;
         }
-    }
-    function nextRoute() { cycleIdx = (cycleIdx + 1) % ROUTES.length; ri = 0; segT = 0; }
-    function step(dt) {
-        if (phase !== 'move') {
-            phaseT -= dt;
-            if (phaseT <= 0) { const f = afterPhase; afterPhase = null; phase = 'move'; if (f) f(); }
-            return;
+        function onpage() {
+            const label = deck.slides[deck.current].dataset.label;
+            if (seq() && playedFor !== deck.current) { playedFor = deck.current; run(); }
+            else if (!seq()) playedFor = null;
         }
-        const wp = route();
-        const A = wp[ri], B = wp[ri + 1];
-        const len = Math.hypot(B[0] - A[0], B[1] - A[1]) || 1;
-        segT += dt / 1000 * SPEED;
-        const k = Math.min(1, segT / len);
-        setPos([A[0] + (B[0] - A[0]) * k, A[1] + (B[1] - A[1]) * k]);
-        if (k >= 1) { segT = 0; arrive(ri + 1); }
-    }
-    function frame(now) {
-        if (!active()) { raf = 0; poll = setTimeout(schedule, 400); return; }
-        if (!last) last = now;
-        step(Math.min(50, now - last));
-        last = now;
-        raf = requestAnimationFrame(frame);
-    }
-    function schedule() {
-        cancelAnimationFrame(raf); clearTimeout(poll);
-        if (active()) { if (!layer) build(); last = 0; raf = requestAnimationFrame(frame); }
-        else poll = setTimeout(schedule, 400);
-    }
-    document.addEventListener('deckpage', schedule);
-    schedule();
+        document.addEventListener('click', () => { if (deck.autoBusy) skip = true; }, true);   // 点击=快进（捕获阶段，先于推进）
+        document.addEventListener('deckpage', () => { onpage(); });
+        onpage();
+    };
+    if (window.__deck) boot(); else addEventListener('load', boot, { once: true });
 })();
+
+/* =====================================================================
+   deck-studio 效果基建 · ambient.js — 常驻流转控制器（唯一源）
+   ---------------------------------------------------------------------
+   闭环/迭代机制页的"活流程"——光点循环巡航，每周期走完全部回路（打回
+   分支逐一出演）后到达产出节点，休息后开新周期。离页自动暂停；
+   prefers-reduced-motion 静态；每 deck 至多一处（animation.md 限定）。
+   作者只声明数据（deck 数据区，勿改本文件）：
+     window.DECK_AMBIENT = {
+       pageLabel: '机制',        // 常驻流转所在页的 data-label（无此页则不装配）
+       speed: 200,               // 光点速度（viewBox 单位/秒）：平滑追踪舒适区 ~30°/s 视角，沿线需读标签
+       decideMs: 500,            // 判定菱形停留：标签识读 ≥400ms
+       gateMs: 950,              // 闸口停留：语义"等人"，需明显长于判定
+       restMs: 1800,             // 整周期交付后的呼吸停顿
+       routes: [                 // 回路路线：按演示顺序排列，全部走完回起点开新周期
+         { kind: 'fail1', backFrom: 4, decide: { at: 4, ms: decideMs, then: 'red' },
+           wp: [[105,74],[231,76], ...] },   // backFrom=从该序号起光点变红；decide.at=判定点序号
+       ],
+       nodes: { 0:[x,y,w,h], ... },          // 节点脉冲框（按光点坐标命中，无则只过光点）
+       stateAt: 6, stateRect: [x,y,w,h],     // 可选：到达该序号点亮状态区，周期结束熄灭；不需要设 null
+     };
+   依赖：player.js（window.__deck + deckpage 事件）+ effects.css（ambient-layer 样式）。
+   ===================================================================== */
+(function () {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const boot = () => {
+        const deck = window.__deck, CFG = window.DECK_AMBIENT;
+        if (!deck || !CFG) return;                          // 本 deck 无常驻流转声明 → 不装配
+        const IDX = deck.slides.findIndex(s => s.dataset.label === CFG.pageLabel);
+        if (IDX < 0) return;
+        const SPEED = CFG.speed || 200, DECIDE_MS = CFG.decideMs || 500,
+              GATE_MS = CFG.gateMs || 950, REST_MS = CFG.restMs || 1800;
+        const ROUTES = CFG.routes || [], NODES = CFG.nodes || {},
+              STATE_AT = (CFG.stateAt == null ? null : CFG.stateAt),
+              STATE_RECT = CFG.stateRect || null;
+
+        /* ==================== 引擎区（作者勿改） ==================== */
+        const NS = 'http://www.w3.org/2000/svg';
+        let layer = null, token = null, stateEl = null, gateEl = null;
+        let cycleIdx = 0, ri = 0, segT = 0;
+        let phase = 'move', phaseT = 0, afterPhase = null, last = 0, raf = 0, poll = 0;
+
+        const kind = () => ROUTES[cycleIdx].kind;
+        const route = () => ROUTES[cycleIdx].wp;
+        const active = () => deck.current === IDX && !document.hidden;
+        function el(tag, attrs, cls) {
+            const n = document.createElementNS(NS, tag);
+            for (const k in attrs) n.setAttribute(k, attrs[k]);
+            if (cls) n.setAttribute('class', cls);
+            layer.appendChild(n);
+            return n;
+        }
+        function build() {
+            const svg = deck.slides[IDX].querySelector('svg');
+            layer = document.createElementNS(NS, 'g');
+            layer.setAttribute('class', 'ambient-layer');
+            svg.appendChild(layer);
+            token = el('circle', { cx: route()[0][0], cy: route()[0][1], r: 8 }, 'ftoken');
+            token.setAttribute('fill', '#2563eb');
+            token.setAttribute('stroke', '#fff');
+            token.setAttribute('stroke-width', 2);
+            if (STATE_AT != null && STATE_RECT) {
+                stateEl = el('rect', { x: STATE_RECT[0], y: STATE_RECT[1], width: STATE_RECT[2], height: STATE_RECT[3], rx: 8 }, 'fstate');
+            }
+        }
+        function nodePulse(i) {
+            /* 按光点当前坐标命中节点框（不同路线的 waypoint 序号语义不同，不能按序号查表） */
+            const pt = route()[i];
+            if (!pt) return;
+            for (const k in NODES) {
+                const r = NODES[k];
+                if (pt[0] >= r[0] && pt[0] <= r[0] + r[2] && pt[1] >= r[1] && pt[1] <= r[1] + r[3]) {
+                    const c = el('circle', { cx: r[0] + r[2] / 2, cy: r[1] + r[3] / 2, r: 12 }, 'fpulse');
+                    setTimeout(() => c.remove(), 750);
+                    return;
+                }
+            }
+        }
+        function setPos(pt) { token.setAttribute('cx', pt[0]); token.setAttribute('cy', pt[1]); }
+        function setToken(fill) { token.setAttribute('fill', fill); }
+        function pause(ms, after) { phase = 'pause'; phaseT = ms; afterPhase = after || null; }
+        function arrive(i) {
+            nodePulse(i);
+            const R = ROUTES[cycleIdx];
+            setToken(i >= R.backFrom ? '#ef4444' : '#2563eb');
+            const d = R.decide;
+            if (d && i === d.at) {                                     // 判定停顿：先推进索引再停（杜绝折返卡死）
+                setToken(d.gate ? '#f59e0b' : '#ef4444');
+                if (!gateEl) gateEl = el('circle', { cx: route()[i][0], cy: route()[i][1], r: 16 }, 'fgate');
+                gateEl.style.opacity = 1;
+                ri++;
+                return pause(d.ms, () => {
+                    if (gateEl) { gateEl.remove(); gateEl = null; }    // 移除元素（内联 opacity 压不过无限动画）
+                    if (d.then === 'red') { setToken('#ef4444'); if (stateEl) stateEl.classList.remove('on'); }
+                    else setToken('#2563eb');
+                });
+            }
+            if (kind() === 'pass' && i === STATE_AT && stateEl) stateEl.classList.add('on');
+            ri++;
+            if (ri >= route().length - 1) endRoute();
+        }
+        function endRoute() {
+            const k = kind();
+            if (k === 'pass') {                                        // 全回路走完 → 交付产出，休息后开新周期
+                phase = 'rest'; phaseT = REST_MS;
+                token.setAttribute('opacity', 0);
+                afterPhase = () => { if (stateEl) stateEl.classList.remove('on'); nextRoute(); token.setAttribute('opacity', .95); };
+            } else {                                                   // 打回路线走完：改代码处重启脉冲
+                nodePulse(0);
+                phase = 'pause'; phaseT = 450;
+                afterPhase = () => { nextRoute(); setToken('#2563eb'); };
+            }
+        }
+        function nextRoute() { cycleIdx = (cycleIdx + 1) % ROUTES.length; ri = 0; segT = 0; }
+        function step(dt) {
+            if (phase !== 'move') {
+                phaseT -= dt;
+                if (phaseT <= 0) { const f = afterPhase; afterPhase = null; phase = 'move'; if (f) f(); }
+                return;
+            }
+            const wp = route();
+            const A = wp[ri], B = wp[ri + 1];
+            const len = Math.hypot(B[0] - A[0], B[1] - A[1]) || 1;
+            segT += dt / 1000 * SPEED;
+            const k = Math.min(1, segT / len);
+            setPos([A[0] + (B[0] - A[0]) * k, A[1] + (B[1] - A[1]) * k]);
+            if (k >= 1) { segT = 0; arrive(ri + 1); }
+        }
+        function frame(now) {
+            if (!active()) { raf = 0; poll = setTimeout(schedule, 400); return; }
+            if (!last) last = now;
+            step(Math.min(50, now - last));
+            last = now;
+            raf = requestAnimationFrame(frame);
+        }
+        function schedule() {
+            cancelAnimationFrame(raf); clearTimeout(poll);
+            if (active()) { if (!layer) build(); last = 0; raf = requestAnimationFrame(frame); }
+            else poll = setTimeout(schedule, 400);
+        }
+        document.addEventListener('deckpage', schedule);
+        schedule();
+    };
+    if (window.__deck) boot(); else addEventListener('load', boot, { once: true });
+})();
+
+/* ═══ DECK ENGINE:END ═══ */
+
+window.__deck = new DeckPlayer();
+window.DECK_STEPS = DECK_STEPS_DATA;
 
 </script>
 </body>

@@ -118,9 +118,8 @@ python3 ~/.zcode/skills/deck-studio/scripts/html2pptx/convert.py <deck.html> <ou
 | `references/player.md` | Phase 4 —— 舞台引擎（浏览=无缝长页 / 放映=节拍步进、缩略图侧栏、聚光灯）标准实现 |
 | `references/svg-diagrams.md` | Phase 4 —— 架构图/流程图/图表规范与模板 |
 | `references/animation.md` | Phase 2/4 —— 动画申报制：默认零动画、八机制词表、DECK_STEPS/AMBIENT 声明格式、节奏依据 |
-| `assets/effects/` | Phase 4 —— 动画效果基建（stepfx.js/ambient.js/effects.css），整体嵌入，作者只写数据 |
-| `assets/templates/yunshan.html` | 品牌模板 —— 华为云山联名封面+结束页：复制后只改填写区三处文字（标题/日期/作者），内容页夹在两页之间 |
-| `assets/templates/yunshan-content.html` | 品牌模板 —— 云山内容页四型骨架（内容页/卡片网格/表格混排/深蓝金句），按页型复制替换占位文案 |
+| `assets/effects/` | Phase 4 —— 引擎唯一源四件套（player.js 核心类 / stepfx.js 步进 / auto.js 自动连播 / ambient.js 常驻流转 + effects.css）：deck 内 ═══ DECK ENGINE ═══ 标记块由 sync-engine.mjs 写入，**严禁手改**；作者只写 DECK_STEPS/DECK_AUTO/DECK_AMBIENT 数据声明 |
+| `assets/templates/yunshan.html` | 品牌模板 —— 云山全页型单一模板（封面/内容页/卡片网格/表格混排/深蓝金句/结束页）：复制后改填写区文字、按页型增删 section、替换占位文案 |
 | `references/copywriting.md` | Phase 1/2/4 —— 文案规范（中文、标题句式、数字） |
 
 ## 常见故障
