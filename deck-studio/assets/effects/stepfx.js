@@ -14,11 +14,17 @@ Object.assign(DeckPlayer.prototype, {
     programStep() {
         if (this.tourWait) { const r = this.tourResolve; this.tourWait = false; this.busy = true; if (r) r(); return true; }
         if (this.tourActive) { this.tourSkip = true; return true; }
+        if (this.busy) { this.seqSkip = true; return true; }      // 动画进行中：点击=快进当前序列
         const label = this.slides[this.current].dataset.label;
         if (this.progLabel !== label) {
             this.progLabel = label;
             this.prog = (window.DECK_STEPS || {})[label] || null;
             this.pi = 0;
+            if (this.prog) {                                       // 结论条遮盖：自动置位，不消耗点击
+                while (this.prog[this.pi] && this.prog[this.pi][0] === 'sumhide') {
+                    this.runAction(this.prog[this.pi]); this.pi++;
+                }
+            }
         }
         if (!this.prog) return false;
         if (this.pi >= this.prog.length) return false;
@@ -37,7 +43,7 @@ Object.assign(DeckPlayer.prototype, {
         if (this.fxRaf) { cancelAnimationFrame(this.fxRaf); this.fxRaf = null; }
         if (this.fx) this.fx.remove();
         this.fx = null; this.fxSvg = null; this.fxToken = null; this.fxVeilEl = null;
-        this.walkEl = null; this.walkEl2 = null; this.gateEl = null;
+        this.walkEl = null; this.walkEl2 = null; this.gateEl = null; this.sumCoverEl = null; this.seqSkip = false;
     },
     fxLayer() {
         const svg = this.slides[this.current].querySelector('svg');
@@ -83,6 +89,29 @@ Object.assign(DeckPlayer.prototype, {
             const el = this.fxEl('rect', { x: r[0], y: r[1], width: r[2], height: r[3], rx: 10, class: 'fx-pulse' });
             await this.wait(950);
             el.remove();
+            return;
+        }
+        if (kind === 'sumhide') {                             // 结论条遮盖（自动置位）
+            const r = a[1];
+            this.sumCoverEl = this.fxEl('rect', { x: r[0], y: r[1], width: r[2], height: r[3], class: 'fx-sumcover on' });
+            return;
+        }
+        if (kind === 'sumshow') {                             // 结论揭示（末拍）
+            if (this.sumCoverEl) {
+                this.sumCoverEl.classList.remove('on');
+                await this.wait(520);
+                this.sumCoverEl.remove(); this.sumCoverEl = null;
+            }
+            return;
+        }
+        if (kind === 'wseq') {                                // 自动连播走查：逐个点亮，点击=全部立即点亮
+            const els = a[1].map(r => this.fxEl('rect', { x: r[0], y: r[1], width: r[2], height: r[3], rx: 8, class: 'fx-lit', opacity: 0 }));
+            const iv = a[2] || 900;
+            for (let i = 0; i < els.length; i++) {
+                els[i].style.opacity = 1;
+                await this.wait(iv);
+                if (this.seqSkip) { els.forEach(e => { e.style.opacity = 1; }); break; }
+            }
             return;
         }
     },

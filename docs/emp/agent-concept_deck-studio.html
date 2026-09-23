@@ -168,6 +168,11 @@ body.presenting .deck-progress, body.presenting .deck-sidebar { opacity: 0; poin
 .ambient-layer .fstate { fill: rgba(29,78,216,.15); stroke: #1d4ed8; stroke-width: 1.5; opacity: 0; transition: opacity .4s ease; }
 .ambient-layer .fstate.on { opacity: 1; }
 .ambient-layer .ftoken { transition: fill .3s ease, opacity .4s ease; }
+.fx-layer .fx-sumcover { fill: #fff; opacity: 0; transition: opacity .5s ease; }
+.fx-layer .fx-sumcover.on { opacity: 1; }
+.fx-layer .fx-lit { transition: opacity .35s ease; }
+.ambient-layer .fsidep { fill: rgba(59,130,246,.12); stroke: rgba(37,99,235,.75); stroke-width: 1.5; opacity: 0; animation: fsidep .85s ease-out 1 forwards; }
+@keyframes fsidep { 0% { opacity: .95; } 100% { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .2s !important; }
 }
@@ -1043,6 +1048,7 @@ class DeckPlayer {
 }
 const DECK_STEPS_DATA = {
   '形态': [
+    ['sumhide', [25,408,990,42]],
     ['t', [
       ['veil', [25,15,990,290]],
       ['lit',  [30,30,270,34]],
@@ -1067,10 +1073,10 @@ const DECK_STEPS_DATA = {
       ['move', 777,92, 853,185, 450],
       ['lit',  [803,154,100,62]],
     ]],
-    ['w', [28,324,362,32]],
-    ['w', [390,324,550,32]],
+    ['sumshow'],
   ],
   '场景': [
+    ['sumhide', [25,440,980,32]],
     ['t', [
       ['veil', [25,30,330,210]],
       ['lit',  [30,40,200,56]],
@@ -1079,11 +1085,14 @@ const DECK_STEPS_DATA = {
       ['move', 345,155, 500,157, 500],
       ['lit',  [370,126,630,62]],
     ]],
+    ['pulse', [25,243,980,58]],
     ['w', [30,318,310,56]],
     ['w', [350,318,310,56]],
     ['w', [670,318,330,56]],
+    ['sumshow'],
   ],
   '协同': [
+    ['sumhide', [25,400,990,52]],
     ['t', [
       ['veil', [25,30,675,130]],
       ['lit',  [30,38,155,52]],
@@ -1093,12 +1102,8 @@ const DECK_STEPS_DATA = {
       ['move', 508,96, 627,106, 500],
       ['lit',  [562,82,130,48]],
     ]],
-    ['w', [35,202,970,28]],
-    ['w', [35,234,970,28]],
-    ['w', [35,266,970,28]],
-    ['w', [35,298,970,28]],
-    ['w', [35,330,970,28]],
-    ['w', [35,362,970,28]],
+    ['wseq', [[35,202,970,28],[35,234,970,28],[35,266,970,28],[35,298,970,28],[35,330,970,28],[35,362,970,28]], 900],
+    ['sumshow'],
   ],
   '能力矩阵': [
     ['w', [125,42,885,172]],
@@ -1121,15 +1126,22 @@ Object.assign(DeckPlayer.prototype, {
         if (this.fx) this.fx.remove();
         this.fx = null; this.fxSvg = null; this.fxToken = null; this.fxVeilEl = null;
         this.walkEl = null; this.walkEl2 = null; this.gateRing = null;
+        this.gateEl = null; this.sumCoverEl = null; this.seqSkip = false;
     },
     programStep() {
         if (this.tourWait) { const r = this.tourResolve; this.tourWait = false; this.busy = true; if (r) r(); return true; }
         if (this.tourActive) { this.tourSkip = true; return true; }
+        if (this.busy) { this.seqSkip = true; return true; }      // 动画进行中：点击=快进当前序列
         const label = this.slides[this.current].dataset.label;
         if (this.progLabel !== label) {
             this.progLabel = label;
             this.prog = (window.DECK_STEPS || {})[label] || null;
             this.pi = 0;
+            if (this.prog) {                                       // 结论条遮盖：自动置位，不消耗点击
+                while (this.prog[this.pi] && this.prog[this.pi][0] === 'sumhide') {
+                    this.runAction(this.prog[this.pi]); this.pi++;
+                }
+            }
         }
         if (!this.prog) return false;
         if (this.pi >= this.prog.length) return false;
@@ -1176,6 +1188,29 @@ Object.assign(DeckPlayer.prototype, {
             const el = this.fxEl('rect', { x: r[0], y: r[1], width: r[2], height: r[3], rx: 10, class: 'fx-pulse' });
             await this.wait(950);
             el.remove();
+            return;
+        }
+        if (kind === 'sumhide') {                                // 结论条遮盖（自动置位，不消耗点击）
+            const r = a[1];
+            this.sumCoverEl = this.fxEl('rect', { x: r[0], y: r[1], width: r[2], height: r[3], class: 'fx-sumcover on' });
+            return;
+        }
+        if (kind === 'sumshow') {                                // 结论揭示（末拍）
+            if (this.sumCoverEl) {
+                this.sumCoverEl.classList.remove('on');
+                await this.wait(520);
+                this.sumCoverEl.remove(); this.sumCoverEl = null;
+            }
+            return;
+        }
+        if (kind === 'wseq') {                                   // 自动连播走查：逐个点亮，点击=全部立即点亮
+            const els = a[1].map(r => this.fxEl('rect', { x: r[0], y: r[1], width: r[2], height: r[3], rx: 8, class: 'fx-lit', opacity: 0 }));
+            const iv = a[2] || 900;
+            for (let i = 0; i < els.length; i++) {
+                els[i].style.opacity = 1;
+                await this.wait(iv);
+                if (this.seqSkip) { els.forEach(e => { e.style.opacity = 1; }); break; }
+            }
             return;
         }
     },
@@ -1328,6 +1363,12 @@ window.__deck = new DeckPlayer();
         nodePulse(i);
         const R = ROUTES[cycleIdx];
         setToken(i >= R.backFrom ? '#ef4444' : '#2563eb');
+        const SIDE = {1:[530,250,466,18], 3:[530,276,466,18], 5:[530,300,466,18]};   // 接点①②③ → 右侧清单行联动
+        if (SIDE[i] && i < R.backFrom) {   // 仅前进方向联动（打回段不点亮清单）
+            const r = SIDE[i];
+            const c = el('rect', { x: r[0], y: r[1], width: r[2], height: r[3], rx: 6, class: 'fsidep' });
+            setTimeout(() => c.remove(), 850);
+        }
         const d = R.decide;
         if (d && i === d.at) {                                     // 判定停顿：先推进索引再停（杜绝折返卡死）
             setToken(d.gate ? '#f59e0b' : '#ef4444');

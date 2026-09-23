@@ -82,7 +82,7 @@ try {
     const label = document.querySelector('section.slide.current')?.dataset.label;
     const prog = (window.DECK_STEPS || {})[label];
     if (!prog) return null;
-    return prog.reduce((n, a) => n + (a[0] === 't' ? 1 + a[1].filter(m => m[0] === 'gate').length : 1), 0);
+    return prog.reduce((n, a) => n + (a[0] === 'sumhide' ? 0 : a[0] === 't' ? 1 + a[1].filter(m => m[0] === 'gate').length : 1), 0);
   });
   let pc = await progClicks();
   let beats = pc !== null ? pc : st.revealCount;

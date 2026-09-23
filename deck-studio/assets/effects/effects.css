@@ -9,7 +9,11 @@
 /* —— 步进程序 fx 层（DECK_STEPS；终态 = 静态整页）—— */
 .fx-layer .fx-veil { fill: #fff; opacity: 0; transition: opacity .45s ease; }
 .fx-layer .fx-veil.on { opacity: .78; }
-.fx-layer .fx-lit { fill: rgba(59,130,246,.3); stroke: rgba(37,99,235,.9); stroke-width: 1.6; }
+.fx-layer .fx-lit { fill: rgba(59,130,246,.3); stroke: rgba(37,99,235,.9); stroke-width: 1.6; transition: opacity .35s ease; }
+.fx-layer .fx-sumcover { fill: #fff; opacity: 0; transition: opacity .5s ease; }
+.fx-layer .fx-sumcover.on { opacity: 1; }
+.ambient-layer .fsidep { fill: rgba(59,130,246,.12); stroke: rgba(37,99,235,.75); stroke-width: 1.5; opacity: 0; animation: fsidep .85s ease-out 1 forwards; }
+@keyframes fsidep { 0% { opacity: .95; } 100% { opacity: 0; } }
 .fx-layer .fx-state { fill: rgba(29,78,216,.18); stroke: #1d4ed8; stroke-width: 2; }
 .fx-layer .fx-gate { fill: none; stroke: #f59e0b; stroke-width: 3; animation: fxgate 1s ease-in-out infinite; }
 @keyframes fxgate { 0%,100% { opacity: .3; } 50% { opacity: 1; } }
