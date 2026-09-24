@@ -1395,8 +1395,9 @@ Object.assign(DeckPlayer.prototype, {
    作者只声明数据（deck 数据区，勿改本文件）：
      window.DECK_AUTO = { 页label: [ 微指令... ] };
      微指令：['flow', x1,y1, x2,y2, dur?, color?]  流线脉冲：一段"撑大的线"沿起点→终点流转后消失（dur 缺省 600ms，color 缺省 #60a5fa）
-             ['flows', [[x1,y1,x2,y2],...], dur?, color?]  多条流线同时流转（扇出/并行语义）
+             ['flows', [[x1,y1,x2,y2, color?],...], dur?, color?]  多条流线同时流转（扇出/并行；每线颜色可单独覆盖）
              ['pulse', [x,y,w,h]]              到站脉冲：区域中心蓝色涟漪，~750ms 即逝，不染色
+             ['pulses', [[x,y,w,h],...]]       多区域同时脉冲（同步到站语义）
              ['lit', [x,y,w,h]]                （遗留·染色）区域点亮——不染色法则下禁用
              ['wseq', [rect,...]]              （遗留·染色）多区域连播——同上
    序列收尾：fx 层清空，页面 100% 恢复原样（终态不变式）；
@@ -1475,9 +1476,10 @@ Object.assign(DeckPlayer.prototype, {
                 if (m[0] === 'lit') await lit(m[1]);
                 else if (m[0] === 'wseq') { for (const r of m[1]) await lit(r); }
                 else if (m[0] === 'flow') await flow(m[1], m[2], m[3], m[4], m[5] || 600, m[6]);
-                else if (m[0] === 'flows') await Promise.all(m[1].map(w => flow(w[0], w[1], w[2], w[3], m[2] || 900, m[3])));
+                else if (m[0] === 'flows') await Promise.all(m[1].map(w => flow(w[0], w[1], w[2], w[3], m[2] || 900, w[4] || m[3])));
                 else if (m[0] === 'move') await move(m[1], m[2], m[3], m[4], m[5] || 500, m[6]);
                 else if (m[0] === 'pulse') { pulse(m[1]); await deck.wait(skip ? 60 : 420); }
+                else if (m[0] === 'pulses') { for (const r of m[1]) pulse(r); await deck.wait(skip ? 60 : 750); }
             }
             if (stale()) { deck.autoBusy = false; return; }      // 已换页：fx 归新页面序列所有
             deck.autoBusy = false;
