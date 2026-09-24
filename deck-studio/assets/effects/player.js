@@ -4,7 +4,7 @@
    本文件是所有 deck 引擎的唯一源；deck 内的引擎块由 scripts/sync-engine.mjs
    从 assets/effects/ 四件套（player.js + stepfx.js + auto.js + ambient.js）
    生成，标记为 ═══ DECK ENGINE:BEGIN/END ═══。改引擎一律改这里再同步，
-   严禁在 deck 内手改引擎块（历史事故：8 份手拷贝双向漂移）。
+   严禁在 deck 内手改引擎块——多副本必然漂移。
 
    player 壳 DOM 契约（完整标记见模板 assets/templates/yunshan.html）：
      必需  #deckStage > #deckFit > section.slide×N（每页 data-label 必填）

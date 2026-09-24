@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 // sync-engine.mjs — 引擎唯一源同步器（deck-studio 引擎纪律的执行工具）
 //
-// 背景：每个 deck 是单文件 HTML，引擎以标记块内联其中。历史上 8 份手拷贝
-// 双向漂移（Esc 修复只覆盖 3/8），故引擎只允许在 assets/effects/ 四件套里
-// 改，deck 内一律标记块 + 本脚本同步。
+// 背景：每个 deck 是单文件 HTML，引擎以标记块内联其中。多副本手改必然漂移，
+// 故引擎只允许在 assets/effects/ 五件套里改，deck 内一律标记块 + 本脚本同步。
 //
 // 用法:
-//   node sync-engine.mjs           同步所有含标记块的 deck（deck-studio/assets 与 docs 下 .html）
-//   node sync-engine.mjs --check   只校验不同步（块内容≠唯一源 / 块外存在引擎拷贝），退出码 1
+//   node sync-engine.mjs [路径...] [--check]
+//     路径 = deck 文件或目录（目录递归找 .html）；缺省扫描本 skill 的 assets/ 与同级 docs/（若存在）
+//   --check  只校验不同步（块内容≠唯一源 / 块外存在引擎拷贝），退出码 1
 //
 // 标记协议（deck 内）:
 //   /* ═══ DECK ENGINE:BEGIN ... ═══ */  player+stepfx+auto+ambient  /* ═══ DECK ENGINE:END ═══ */
@@ -17,7 +17,8 @@
 //
 // 退出码契约: 0 = 已同步/全部一致；1 = 校验失败；2 = 工具错误。
 
-import { readFileSync, writeFileSync, readdirSync, statSync } from 'node:fs';
+import { readFileSync, writeFileSync, readdirSync, statSync, existsSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -25,6 +26,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));       // deck-studio/scrip
 const ROOT = join(HERE, '..');                              // deck-studio/
 const REPO = join(ROOT, '..');                              // 仓根
 const CHECK = process.argv.includes('--check');
+const EXPLICIT = process.argv.slice(2).filter(a => !a.startsWith('--'));
 
 const JS_SOURCES = ['player.js', 'stepfx.js', 'auto.js', 'countup.js', 'ambient.js']
     .map(f => readFileSync(join(ROOT, 'assets/effects', f), 'utf8').trimEnd());
@@ -50,7 +52,14 @@ function walk(dir, out = []) {
     return out;
 }
 
-const files = [...walk(join(ROOT, 'assets')), ...walk(join(REPO, 'docs'))];
+const docsDir = join(REPO, 'docs');
+const files = EXPLICIT.length
+    ? EXPLICIT.flatMap(p => {
+        const full = resolve(p);
+        if (!existsSync(full)) { console.error(`找不到: ${full}`); process.exit(2); }
+        return statSync(full).isDirectory() ? walk(full) : [full];
+      })
+    : [...walk(join(ROOT, 'assets')), ...(existsSync(docsDir) ? walk(docsDir) : [])];
 let dirty = 0, checked = 0;
 const failures = [];
 

@@ -3,7 +3,6 @@
    步进程序（DECK_STEPS）与常驻流转（AMBIENT）的样式层。
    用法：整体粘贴到 deck <style> 末尾。作者无需修改本文件；
    暗色主题适配：覆盖 theme.md 的 --glass-* 与本文的 rgba 色值即可。
-   提取自参考实现 docs/emp/agent-concept_deck-studio.html（已验证）。
    ===================================================================== */
 
 /* —— 步进程序 fx 层（DECK_STEPS；终态 = 静态整页）—— */

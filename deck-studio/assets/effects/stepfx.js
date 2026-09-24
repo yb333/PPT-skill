@@ -5,8 +5,7 @@
      1. 前置：player 壳（DeckPlayer 类 + window.__deck + syncChrome 内派发 deckpage 事件）
      2. 本文件整体粘贴到 deck 脚本内、`new DeckPlayer()` 之后（mixin 挂到原型）
      3. 作者只声明 window.DECK_STEPS 数据（格式见 references/animation.md），不改引擎
-   提取自参考实现 docs/emp/agent-concept_deck-studio.html（已验证）。
-   工程警告：fx 元素缓存属性勿与方法同名（fxToken 属性/方法冲突曾致巡游卡死，令名 newToken）。
+   命名约束：fx 元素缓存属性勿与方法同名（缓存属性一律以 newToken 等动词命名）。
    ===================================================================== */
 Object.assign(DeckPlayer.prototype, {
     /* 放映态 step() 顶部必须先调用本钩子（返回 true = 本次点击已被程序消费）：

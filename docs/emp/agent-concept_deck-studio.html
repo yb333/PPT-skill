@@ -923,7 +923,7 @@ window.DECK_AMBIENT = {
    本文件是所有 deck 引擎的唯一源；deck 内的引擎块由 scripts/sync-engine.mjs
    从 assets/effects/ 四件套（player.js + stepfx.js + auto.js + ambient.js）
    生成，标记为 ═══ DECK ENGINE:BEGIN/END ═══。改引擎一律改这里再同步，
-   严禁在 deck 内手改引擎块（历史事故：8 份手拷贝双向漂移）。
+   严禁在 deck 内手改引擎块——多副本必然漂移。
 
    player 壳 DOM 契约（完整标记见模板 assets/templates/yunshan.html）：
      必需  #deckStage > #deckFit > section.slide×N（每页 data-label 必填）
@@ -1181,8 +1181,7 @@ class DeckPlayer {
      1. 前置：player 壳（DeckPlayer 类 + window.__deck + syncChrome 内派发 deckpage 事件）
      2. 本文件整体粘贴到 deck 脚本内、`new DeckPlayer()` 之后（mixin 挂到原型）
      3. 作者只声明 window.DECK_STEPS 数据（格式见 references/animation.md），不改引擎
-   提取自参考实现 docs/emp/agent-concept_deck-studio.html（已验证）。
-   工程警告：fx 元素缓存属性勿与方法同名（fxToken 属性/方法冲突曾致巡游卡死，令名 newToken）。
+   命名约束：fx 元素缓存属性勿与方法同名（缓存属性一律以 newToken 等动词命名）。
    ===================================================================== */
 Object.assign(DeckPlayer.prototype, {
     /* 放映态 step() 顶部必须先调用本钩子（返回 true = 本次点击已被程序消费）：
@@ -1401,7 +1400,7 @@ Object.assign(DeckPlayer.prototype, {
              ['lit', [x,y,w,h]]                （遗留·染色）区域点亮——不染色法则下禁用
              ['wseq', [rect,...]]              （遗留·染色）多区域连播——同上
    序列收尾：fx 层清空，页面 100% 恢复原样（终态不变式）；
-   序列绑定进页时的页号，换页即作废（防止旧序列画到新页上——串页事故 2026-09-24）。
+   序列绑定进页时的页号，换页即作废（防止旧序列画到新页上）。
    依赖：player.js（window.__deck + deckpage 事件）与 stepfx.js（fxLayer/
    fxEl/newToken/wait——本文件在混合层之后装配）。无数据时本模块不装配。
    ===================================================================== */
