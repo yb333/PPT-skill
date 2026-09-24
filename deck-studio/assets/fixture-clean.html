@@ -471,9 +471,9 @@ Object.assign(DeckPlayer.prototype, {
         if (!this.prog) return false;
         if (this.pi >= this.prog.length) return false;
         const a = this.prog[this.pi++];
-        this.busy = true;
-        Promise.resolve(this.runAction(a)).then(() => { this.busy = false; });
-        return true;
+    this.busy = true;
+    Promise.resolve(this.runAction(a)).finally(() => { this.busy = false; });   // finally：动作抛错也不得卡死按键
+    return true;
     },
     /* 换页 / 退出放映时调用：清 fx、重置程序指针（终态不变式）。
        放映态进页即前置 sumhide（结论条从进页就遮住，而非首击才遮——防结论剧透）；
@@ -481,6 +481,7 @@ Object.assign(DeckPlayer.prototype, {
     initProgram() {
         this.prog = null; this.progLabel = null; this.pi = 0;
         this.tourActive = false; this.tourWait = false; this.tourSkip = false;
+        this.busy = false;                                   // 换页硬复位：在途动作的 finally 兜底，不会双清
         this.clearFx();
         if (!this.presenting) return;
         const label = this.slides[this.current].dataset.label;
@@ -549,10 +550,12 @@ Object.assign(DeckPlayer.prototype, {
             return;
         }
         if (kind === 'sumshow') {                             // 结论揭示（末拍）
-            if (this.sumCoverEl) {
-                this.sumCoverEl.classList.remove('on');
+            const el = this.sumCoverEl;                       // 局部引用：等待期间 clearFx 可能置空（换页），不得对 null remove
+            if (el) {
+                el.classList.remove('on');
                 await this.wait(520);
-                this.sumCoverEl.remove(); this.sumCoverEl = null;
+                el.remove();
+                if (this.sumCoverEl === el) this.sumCoverEl = null;
             }
             return;
         }
