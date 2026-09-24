@@ -6,9 +6,11 @@
    prefers-reduced-motion 静态；每页每次进入只演一遍，离页再来重演。
    作者只声明数据（deck 数据区，勿改本文件）：
      window.DECK_AUTO = { 页label: [ 微指令... ] };
-     微指令：['lit', [x,y,w,h]]                 区域点亮（viewBox 坐标）
-             ['move', x1,y1, x2,y2, dur?]      光点飞行（dur 缺省 500ms）
-             ['wseq', [rect,...]]              多区域逐个连播（每拍 = lit 节奏 420ms）
+     微指令：['move', x1,y1, x2,y2, dur?, color?]  光点沿路径飞行（dur 缺省 500ms，color 缺省品牌蓝）
+             ['pulse', [x,y,w,h]]              到站脉冲：区域中心蓝色涟漪，~750ms 即逝，不染色
+             ['lit', [x,y,w,h]]                （遗留）区域点亮——不染色法则下新 deck 勿用
+             ['wseq', [rect,...]]              （遗留）多区域连播——同上
+   序列收尾：光点自动淡出 + fx 层清空，页面 100% 恢复原样（终态不变式）。
    依赖：player.js（window.__deck + deckpage 事件）与 stepfx.js（fxLayer/
    fxEl/newToken/wait——本文件在混合层之后装配）。无数据时本模块不装配。
    ===================================================================== */
@@ -27,10 +29,16 @@
             requestAnimationFrame(() => { e.style.transition = 'opacity .4s ease'; e.style.opacity = 1; });
             return deck.wait(420);
         }
-        function move(x1, y1, x2, y2, dur) {
+        function pulse(rect) {
+            const fx = deck.fxLayer();
+            if (!fx || !deck.slides[deck.current].querySelector('svg')) return;
+            const c = deck.fxEl('circle', { cx: rect[0] + rect[2] / 2, cy: rect[1] + rect[3] / 2, r: 14 }, 'fpulse');
+            setTimeout(() => c.remove(), 750);
+        }
+        function move(x1, y1, x2, y2, dur, color) {
             return new Promise(res => {
                 if (!deck.slides[deck.current].querySelector('svg')) return res();
-                const token = deck.newToken('#2563eb');
+                const token = deck.newToken(color || '#2563eb');
                 const t0 = performance.now();
                 const tick = now => {
                     if (skip) { token.setAttribute('cx', x2); token.setAttribute('cy', y2); return res(); }
@@ -50,9 +58,13 @@
                 if (skip) { if (m[0] === 'lit') { const fx = deck.fxLayer(); const e = deck.fxEl('rect', { x: m[1][0], y: m[1][1], width: m[1][2], height: m[1][3], rx: 8, class: 'fx-lit' }); e.setAttribute('opacity', 1); } else if (m[0] === 'wseq') { for (const r of m[1]) { const fx = deck.fxLayer(); if (!fx) break; const e = deck.fxEl('rect', { x: r[0], y: r[1], width: r[2], height: r[3], rx: 8, class: 'fx-lit' }); e.setAttribute('opacity', 1); } } continue; }
                 if (m[0] === 'lit') await lit(m[1]);
                 else if (m[0] === 'wseq') { for (const r of m[1]) await lit(r); }
-                else if (m[0] === 'move') await move(m[1], m[2], m[3], m[4], m[5] || 500);
+                else if (m[0] === 'move') await move(m[1], m[2], m[3], m[4], m[5] || 500, m[6]);
+                else if (m[0] === 'pulse') { pulse(m[1]); await deck.wait(420); }
             }
             deck.autoBusy = false;
+            const tk = deck.fxToken;                     // 收尾：光点淡出，页面恢复原样
+            if (tk) { tk.style.transition = 'opacity .5s ease'; tk.setAttribute('opacity', 0); }
+            setTimeout(() => { if (!deck.autoBusy && window.__deck === deck) deck.clearFx(); }, 600);
         }
         function onpage() {
             const label = deck.slides[deck.current].dataset.label;

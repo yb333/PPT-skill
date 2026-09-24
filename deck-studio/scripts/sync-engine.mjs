@@ -26,7 +26,7 @@ const ROOT = join(HERE, '..');                              // deck-studio/
 const REPO = join(ROOT, '..');                              // 仓根
 const CHECK = process.argv.includes('--check');
 
-const JS_SOURCES = ['player.js', 'stepfx.js', 'auto.js', 'ambient.js']
+const JS_SOURCES = ['player.js', 'stepfx.js', 'auto.js', 'countup.js', 'ambient.js']
     .map(f => readFileSync(join(ROOT, 'assets/effects', f), 'utf8').trimEnd());
 const FX_CSS = readFileSync(join(ROOT, 'assets/effects/effects.css'), 'utf8').trimEnd();
 

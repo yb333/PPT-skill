@@ -14,7 +14,10 @@
        routes: [                 // 回路路线：按演示顺序排列，全部走完回起点开新周期
          { kind: 'fail1', backFrom: 4, decide: { at: 4, ms: decideMs, then: 'red' },
            wp: [[105,74],[231,76], ...] },   // backFrom=从该序号起光点变红；decide.at=判定点序号
-       ],
+         { kind: '复杂路线', backFrom: 99,
+           decides: { 3: { ms: 950, gate: true, then: 'red' }, 7: { ms: 500, then: 'blue' } },
+           wp: [...] },                      // decides=多点判定（序号→{ms,gate,then}），色彩只由判定驱动，
+       ],                                    // 表达"一条路线走满全部回路"；与单判定 decide 互斥
        nodes: { 0:[x,y,w,h], ... },          // 节点脉冲框（按光点坐标命中，无则只过光点）
        stateAt: 6, stateRect: [x,y,w,h],     // 可选：到达该序号点亮状态区，周期结束熄灭；不需要设 null
      };
@@ -81,6 +84,19 @@
         function arrive(i) {
             nodePulse(i);
             const R = ROUTES[cycleIdx];
+            if (R.decides) {                                           // 多点判定路线：色彩由各判定驱动
+                const d = R.decides[i];
+                if (d) {
+                    setToken(d.gate ? '#f59e0b' : '#ef4444');
+                    if (d.gate) { if (!gateEl) gateEl = el('circle', { cx: route()[i][0], cy: route()[i][1], r: 16 }, 'fgate'); gateEl.style.opacity = 1; }
+                    ri++;
+                    return pause(d.ms, () => {
+                        if (gateEl) { gateEl.remove(); gateEl = null; }    // 移除元素（内联 opacity 压不过无限动画）
+                        setToken(d.then === 'red' ? '#ef4444' : '#2563eb');
+                        if (d.then === 'red' && stateEl) stateEl.classList.remove('on');
+                    });
+                }
+            } else {
             setToken(i >= R.backFrom ? '#ef4444' : '#2563eb');
             const d = R.decide;
             if (d && i === d.at) {                                     // 判定停顿：先推进索引再停（杜绝折返卡死）
@@ -94,6 +110,7 @@
                     else setToken('#2563eb');
                 });
             }
+            }
             if (kind() === 'pass' && i === STATE_AT && stateEl) stateEl.classList.add('on');
             ri++;
             if (ri >= route().length - 1) endRoute();
@@ -103,7 +120,7 @@
             if (k === 'pass') {                                        // 全回路走完 → 交付产出，休息后开新周期
                 phase = 'rest'; phaseT = REST_MS;
                 token.setAttribute('opacity', 0);
-                afterPhase = () => { if (stateEl) stateEl.classList.remove('on'); nextRoute(); token.setAttribute('opacity', .95); };
+                afterPhase = () => { if (stateEl) stateEl.classList.remove('on'); nextRoute(); setPos(route()[0]); setToken('#2563eb'); token.setAttribute('opacity', .95); };
             } else {                                                   // 打回路线走完：改代码处重启脉冲
                 nodePulse(0);
                 phase = 'pause'; phaseT = 450;

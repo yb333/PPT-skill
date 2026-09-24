@@ -78,7 +78,20 @@ try {
   ok(st.presenting, 'F 进入放映态（body.presenting；全屏被拒时仍应成立）');
   ok(st.current === 0, `放映恒自封面起（current=${st.current}，与浏览位置无关）`);
   ok(!st.anyVisible, '进页 reveal 收起（第 0 拍空场）');
-  const waitIdle = () => page.waitForFunction(() => !window.__deck || !window.__deck.busy, { timeout: 8000 }).catch(() => {});
+  /* 确定性按键：ack 监听注册在 deck 的 keydown 处理器之后（bubble 序=注册序），
+     ack 递增 ⇒ 同一次派发内 deck 的 step() 已同步执行完（busy 翻转已发生）⇒
+     之后再等 busy 清零就没有竞态窗口（动画负载下按键派发可延迟 100ms+，时序等待不可靠） */
+  await page.evaluate(() => {
+    window.__keyAck = 0;
+    document.addEventListener('keydown', () => { window.__keyAck++; });
+  });
+  const pressKey = async (key) => {
+    const before = await page.evaluate(() => window.__keyAck);
+    await page.keyboard.press(key);
+    await page.waitForFunction(b => window.__keyAck > b, before, { timeout: 5000 }).catch(() => {});
+    await page.waitForFunction(() => !window.__deck || !window.__deck.busy, { timeout: 8000 }).catch(() => {});
+    await page.waitForTimeout(60);
+  };
   const curLabel = () => page.evaluate(() => document.querySelector('section.slide.current')?.dataset.label);
   const progClicks = (label) => page.evaluate(lbl => {
     const prog = (window.DECK_STEPS || {})[lbl];
@@ -96,9 +109,7 @@ try {
   for (let i = 0; i < s0.total - 1; i++) {
     const { beats, mode } = await pageBeats();
     for (let k = 0; k < beats; k++) {
-      await page.keyboard.press('ArrowRight');
-      await waitIdle();
-      await page.waitForTimeout(120);
+      await pressKey('ArrowRight');
       const s = await state();
       ok(s.current === i, `第 ${i + 1} 页第 ${k + 1} 拍仍在本页（current=${s.current}）`);
       if (mode === 'reveal') {
@@ -109,9 +120,8 @@ try {
         ok(await page.evaluate(() => !!window.__deck.prog), '申报程序已装载（deck.prog 就绪）');
       }
     }
-    await page.keyboard.press('ArrowRight');
-    await waitIdle();
-    await page.waitForTimeout(200);
+    await pressKey('ArrowRight');
+    await page.waitForTimeout(140);
     st = await state();
     ok(st.current === i + 1, `第 ${i + 1} 页节拍放完翻到第 ${i + 2} 页（current=${st.current}）`);
   }
@@ -119,9 +129,7 @@ try {
   console.log('== 末页结束放映 ==');
   const { beats: lastBeats, mode: lastMode } = await pageBeats();
   for (let k = 0; k < lastBeats; k++) {
-    await page.keyboard.press('ArrowRight');
-    await waitIdle();
-    await page.waitForTimeout(120);
+    await pressKey('ArrowRight');
     const s = await state();
     ok(s.current === s0.total - 1, `末页第 ${k + 1} 拍仍在末页（current=${s.current}）`);
     if (lastMode === 'reveal') {
@@ -140,10 +148,10 @@ try {
     }, { timeout: 3000 }).catch(() => {});
   }
   ok(lastBeats === 0 || stLast.revealCount === 0 || (await state()).anyVisible, '末页内容保持放出（未被重置）');
-  await page.keyboard.press('ArrowRight');
-  await page.waitForTimeout(400);
+  await pressKey('ArrowRight');
+  await page.waitForTimeout(340);
   ok(await page.evaluate(() => document.body.classList.contains('presenting')), '第一次 →：武装提示，不误退、不重复');
-  await page.keyboard.press('ArrowRight');
+  await pressKey('ArrowRight');
   await page.waitForFunction(() => !document.body.classList.contains('presenting'), { timeout: 5000 }).catch(() => {});
   ok(!(await page.evaluate(() => document.body.classList.contains('presenting'))), '第二次 →：结束放映');
   st = await state();

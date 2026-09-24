@@ -19,7 +19,7 @@
 | 资产 | 作用 | 作者要写的 |
 |------|------|-----------|
 | `assets/effects/effects.css` | fx 高亮/闸口环/脉冲/常驻流转的全部样式 | 无（标记块由 sync-engine 写入） |
-| `assets/effects/player.js` 等 JS 四件 | 核心类/步进/自动连播/常驻流转，deck 内 ═══ DECK ENGINE ═══ 标记块 | 无（严禁手改）+ `DECK_STEPS`/`DECK_AUTO`/`DECK_AMBIENT` 数据声明 |
+| `assets/effects/player.js` 等 JS 五件 | 核心类/步进/自动连播/数字滚动/常驻流转，deck 内 ═══ DECK ENGINE ═══ 标记块 | 无（严禁手改）+ `DECK_STEPS`/`DECK_AUTO`/`DECK_COUNTUP`/`DECK_AMBIENT` 数据声明 |
 | `references/player.md` | 播放器壳（浏览/放映双模式、缩略图、聚光灯） | 无（照 player.md 实现） |
 
 **作者的三样输入**：
@@ -41,7 +41,14 @@
 | 脉冲 `pulse` | DECK_STEPS | 引导 | 点名阻塞/风险，只此一次 | ⚡阻塞项红格 |
 | 状态变更 | 巡游 `state` / overlay | 状态 | 达标、迁移、对比 | 代码稳定浅→深蓝 |
 | 双光点 `move2` | 巡游微指令 | 流转 | 并行汇合（同时出现=并行语义） | 两入口合流 |
-| count-up | 自写（15 行） | 状态 | 数字本身是论点时（罕见） | — |
+| count-up | DECK_COUNTUP（countup.js） | 状态 | 数字本身是论点时 | 成果页六数、价值倍数：进页 0→真值，终帧=原文 |
+
+### 光点语言法则（2026-09-24 定案，tech-review deck 审美裁决）
+
+动画住在**箭头**上：光点沿路径飞行，到站一个短暂脉冲（fpulse，~750ms 即逝），演完页面 **100% 恢复原样**。
+据此裁决：**lit / wseq / w / state / veil 等持久染色机制对新 deck 退役**（引擎保留兼容旧 deck），
+讲者「指着说」的需求用放映聚光灯（P）满足；走查/染色的强调让位给动线+脉冲。
+流转类动画优先「常驻」；其余页面动线进页演一遍即静止。count-up 终帧=原文，不违恢复原样法则。
 
 ## 四、节奏常量（科学依据，均为具名常量可调）
 
@@ -120,9 +127,24 @@ window.DECK_STEPS = {
 
 （依据：MIT 传播实验室 "less is more"；Mayer 相干性原则——多余动画增加外在认知负荷；信号性原则——动效应指向 essential 内容。）
 
+## 作者接口：DECK_COUNTUP（数字滚动）
+
+```html
+<script>
+window.DECK_COUNTUP = {
+  '页label': { ms: 1200, items: [[x, y], ...] },   // (x,y) = 页 svg <text> 的坐标属性
+};
+</script>
+```
+
+进页从 0 滚到真值（easing-out，多数字轻错拍），文本解析为「前缀+整数+后缀」只滚整数
+（`50+`、`≈3~5×` 均可）；**终帧严格还原原文**。坐标没匹配到 text 就静默跳过。
+
 ## 六、作者接口 2：AMBIENT 参数区（常驻流转）
 
-仅限**闭环/迭代**内容，每 deck 至多一处。引擎在标记块内（勿改），作者只声明 `window.DECK_AMBIENT` 数据：`pageLabel`、`speed`、`decideMs`、`gateMs`、`restMs`、`routes`（回路路线按演示顺序，`backFrom` 标打回段、`decide` 声明判定停顿与转向）、`nodes`、`stateAt`/`stateRect`。完整格式见文件内注释。红线：离页必停（已内置）、reduced-motion 静态（已内置）、禁止循环闪烁装饰。
+仅限**闭环/迭代**内容，每 deck 至多一处。路线支持单判定 `decide` 或多点判定 `decides`
+（`{序号: {ms, gate, then}}`——色彩只由判定驱动，可编排「一条路线走满全部回路」的连续剧，
+如 tech-review 流转页「最复杂的一天」）。引擎在标记块内（勿改），作者只声明 `window.DECK_AMBIENT` 数据：`pageLabel`、`speed`、`decideMs`、`gateMs`、`restMs`、`routes`（回路路线按演示顺序，`backFrom` 标打回段、`decide` 声明判定停顿与转向）、`nodes`、`stateAt`/`stateRect`。完整格式见文件内注释。红线：离页必停（已内置）、reduced-motion 静态（已内置）、禁止循环闪烁装饰。
 
 ## 七、语义参数（动画参数就是语义参数）
 

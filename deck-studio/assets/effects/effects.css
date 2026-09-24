@@ -21,7 +21,8 @@
 @keyframes fxpulse { 0% { opacity: .85; } 100% { opacity: 0; } }
 
 /* —— 常驻流转（AMBIENT）—— */
-.ambient-layer .fpulse { fill: none; stroke: var(--c-info, #3b82f6); stroke-width: 2; opacity: 0; transform-box: fill-box; transform-origin: center; animation: fnodep .7s ease-out 1 forwards; }
+/* fpulse 到站脉冲：ambient 巡航与 auto 光点动线共用（不染色，~750ms 即逝） */
+.ambient-layer .fpulse, .fx-layer .fpulse { fill: none; stroke: var(--c-info, #3b82f6); stroke-width: 2; opacity: 0; transform-box: fill-box; transform-origin: center; animation: fnodep .7s ease-out 1 forwards; }
 @keyframes fnodep { 0% { opacity: .9; transform: scale(.5); } 100% { opacity: 0; transform: scale(1.6); } }
 .ambient-layer .fgate { fill: none; stroke: #f59e0b; stroke-width: 3; animation: fxgate 1s ease-in-out infinite; }
 .ambient-layer .fstate { fill: rgba(29,78,216,.15); stroke: #1d4ed8; stroke-width: 1.5; opacity: 0; transition: opacity .4s ease; }

@@ -657,9 +657,11 @@ Object.assign(DeckPlayer.prototype, {
    prefers-reduced-motion 静态；每页每次进入只演一遍，离页再来重演。
    作者只声明数据（deck 数据区，勿改本文件）：
      window.DECK_AUTO = { 页label: [ 微指令... ] };
-     微指令：['lit', [x,y,w,h]]                 区域点亮（viewBox 坐标）
-             ['move', x1,y1, x2,y2, dur?]      光点飞行（dur 缺省 500ms）
-             ['wseq', [rect,...]]              多区域逐个连播（每拍 = lit 节奏 420ms）
+     微指令：['move', x1,y1, x2,y2, dur?, color?]  光点沿路径飞行（dur 缺省 500ms，color 缺省品牌蓝）
+             ['pulse', [x,y,w,h]]              到站脉冲：区域中心蓝色涟漪，~750ms 即逝，不染色
+             ['lit', [x,y,w,h]]                （遗留）区域点亮——不染色法则下新 deck 勿用
+             ['wseq', [rect,...]]              （遗留）多区域连播——同上
+   序列收尾：光点自动淡出 + fx 层清空，页面 100% 恢复原样（终态不变式）。
    依赖：player.js（window.__deck + deckpage 事件）与 stepfx.js（fxLayer/
    fxEl/newToken/wait——本文件在混合层之后装配）。无数据时本模块不装配。
    ===================================================================== */
@@ -678,10 +680,16 @@ Object.assign(DeckPlayer.prototype, {
             requestAnimationFrame(() => { e.style.transition = 'opacity .4s ease'; e.style.opacity = 1; });
             return deck.wait(420);
         }
-        function move(x1, y1, x2, y2, dur) {
+        function pulse(rect) {
+            const fx = deck.fxLayer();
+            if (!fx || !deck.slides[deck.current].querySelector('svg')) return;
+            const c = deck.fxEl('circle', { cx: rect[0] + rect[2] / 2, cy: rect[1] + rect[3] / 2, r: 14 }, 'fpulse');
+            setTimeout(() => c.remove(), 750);
+        }
+        function move(x1, y1, x2, y2, dur, color) {
             return new Promise(res => {
                 if (!deck.slides[deck.current].querySelector('svg')) return res();
-                const token = deck.newToken('#2563eb');
+                const token = deck.newToken(color || '#2563eb');
                 const t0 = performance.now();
                 const tick = now => {
                     if (skip) { token.setAttribute('cx', x2); token.setAttribute('cy', y2); return res(); }
@@ -701,9 +709,13 @@ Object.assign(DeckPlayer.prototype, {
                 if (skip) { if (m[0] === 'lit') { const fx = deck.fxLayer(); const e = deck.fxEl('rect', { x: m[1][0], y: m[1][1], width: m[1][2], height: m[1][3], rx: 8, class: 'fx-lit' }); e.setAttribute('opacity', 1); } else if (m[0] === 'wseq') { for (const r of m[1]) { const fx = deck.fxLayer(); if (!fx) break; const e = deck.fxEl('rect', { x: r[0], y: r[1], width: r[2], height: r[3], rx: 8, class: 'fx-lit' }); e.setAttribute('opacity', 1); } } continue; }
                 if (m[0] === 'lit') await lit(m[1]);
                 else if (m[0] === 'wseq') { for (const r of m[1]) await lit(r); }
-                else if (m[0] === 'move') await move(m[1], m[2], m[3], m[4], m[5] || 500);
+                else if (m[0] === 'move') await move(m[1], m[2], m[3], m[4], m[5] || 500, m[6]);
+                else if (m[0] === 'pulse') { pulse(m[1]); await deck.wait(420); }
             }
             deck.autoBusy = false;
+            const tk = deck.fxToken;                     // 收尾：光点淡出，页面恢复原样
+            if (tk) { tk.style.transition = 'opacity .5s ease'; tk.setAttribute('opacity', 0); }
+            setTimeout(() => { if (!deck.autoBusy && window.__deck === deck) deck.clearFx(); }, 600);
         }
         function onpage() {
             const label = deck.slides[deck.current].dataset.label;
@@ -712,6 +724,61 @@ Object.assign(DeckPlayer.prototype, {
         }
         document.addEventListener('click', () => { if (deck.autoBusy) skip = true; }, true);   // 点击=快进（捕获阶段，先于推进）
         document.addEventListener('deckpage', () => { onpage(); });
+        onpage();
+    };
+    if (window.__deck) boot(); else addEventListener('load', boot, { once: true });
+})();
+
+/* =====================================================================
+   deck-studio 效果基建 · countup.js — 数字滚动（A 型入口动效，唯一源）
+   ---------------------------------------------------------------------
+   进页把声明的数字文本从 0 滚到真值（8 机制之 count-up），轻错拍依次启动；
+   终帧严格还原原文（含前后缀，如「50+」「≈3~5×」）——终态不变式。
+   reduced-motion 静态；同页重复进入会重滚（与 auto 语义一致）。
+   作者只声明数据（deck 数据区，勿改本文件）：
+     window.DECK_COUNTUP = {
+       页label: { ms: 1200, items: [[x, y], ...] },   // (x,y) = svg <text> 的坐标属性
+     };
+   匹配规则：页 svg 内 x/y 属性精确相等的 <text>；文本解析为「前缀 + 整数 + 后缀」
+   滚动整数部分。找不强求——没匹配到就静默跳过。
+   依赖：player.js（window.__deck + deckpage 事件）。无声明时本模块不装配。
+   ===================================================================== */
+(function () {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const boot = () => {
+        const deck = window.__deck, CFG = window.DECK_COUNTUP;
+        if (!deck || !CFG) return;
+        let playedFor = null;
+        function roll(pageLabel) {
+            const conf = CFG[pageLabel]; if (!conf) return;
+            const svg = deck.slides[deck.current].querySelector('svg'); if (!svg) return;
+            const texts = [...svg.querySelectorAll('text')];
+            const els = (conf.items || [])
+                .map(([x, y]) => texts.find(t => +t.getAttribute('x') === x && +t.getAttribute('y') === y))
+                .filter(Boolean);
+            if (!els.length) return;
+            const dur = conf.ms || 1200;
+            els.forEach((el, k) => {
+                const orig = el.textContent;
+                const m = orig.match(/^(\D*?)(\d[\d,]*)(.*)$/); if (!m) return;
+                const target = parseInt(m[2].replace(/,/g, ''), 10);
+                const t0 = performance.now() + k * 120;          // 轻微错拍，不齐刷刷
+                const tick = now => {
+                    const p = Math.min(1, Math.max(0, (now - t0) / dur));
+                    if (p >= 1) { el.textContent = orig; return; }   // 终帧 = 原文
+                    const e = 1 - Math.pow(1 - p, 3);
+                    el.textContent = m[1] + Math.round(target * e) + m[3];
+                    requestAnimationFrame(tick);
+                };
+                requestAnimationFrame(tick);
+            });
+        }
+        function onpage() {
+            const label = deck.slides[deck.current].dataset.label;
+            if (CFG[label] && playedFor !== deck.current) { playedFor = deck.current; roll(label); }
+            else if (!CFG[label]) playedFor = null;
+        }
+        document.addEventListener('deckpage', onpage);
         onpage();
     };
     if (window.__deck) boot(); else addEventListener('load', boot, { once: true });
@@ -733,7 +800,10 @@ Object.assign(DeckPlayer.prototype, {
        routes: [                 // 回路路线：按演示顺序排列，全部走完回起点开新周期
          { kind: 'fail1', backFrom: 4, decide: { at: 4, ms: decideMs, then: 'red' },
            wp: [[105,74],[231,76], ...] },   // backFrom=从该序号起光点变红；decide.at=判定点序号
-       ],
+         { kind: '复杂路线', backFrom: 99,
+           decides: { 3: { ms: 950, gate: true, then: 'red' }, 7: { ms: 500, then: 'blue' } },
+           wp: [...] },                      // decides=多点判定（序号→{ms,gate,then}），色彩只由判定驱动，
+       ],                                    // 表达"一条路线走满全部回路"；与单判定 decide 互斥
        nodes: { 0:[x,y,w,h], ... },          // 节点脉冲框（按光点坐标命中，无则只过光点）
        stateAt: 6, stateRect: [x,y,w,h],     // 可选：到达该序号点亮状态区，周期结束熄灭；不需要设 null
      };
@@ -800,6 +870,19 @@ Object.assign(DeckPlayer.prototype, {
         function arrive(i) {
             nodePulse(i);
             const R = ROUTES[cycleIdx];
+            if (R.decides) {                                           // 多点判定路线：色彩由各判定驱动
+                const d = R.decides[i];
+                if (d) {
+                    setToken(d.gate ? '#f59e0b' : '#ef4444');
+                    if (d.gate) { if (!gateEl) gateEl = el('circle', { cx: route()[i][0], cy: route()[i][1], r: 16 }, 'fgate'); gateEl.style.opacity = 1; }
+                    ri++;
+                    return pause(d.ms, () => {
+                        if (gateEl) { gateEl.remove(); gateEl = null; }    // 移除元素（内联 opacity 压不过无限动画）
+                        setToken(d.then === 'red' ? '#ef4444' : '#2563eb');
+                        if (d.then === 'red' && stateEl) stateEl.classList.remove('on');
+                    });
+                }
+            } else {
             setToken(i >= R.backFrom ? '#ef4444' : '#2563eb');
             const d = R.decide;
             if (d && i === d.at) {                                     // 判定停顿：先推进索引再停（杜绝折返卡死）
@@ -813,6 +896,7 @@ Object.assign(DeckPlayer.prototype, {
                     else setToken('#2563eb');
                 });
             }
+            }
             if (kind() === 'pass' && i === STATE_AT && stateEl) stateEl.classList.add('on');
             ri++;
             if (ri >= route().length - 1) endRoute();
@@ -822,7 +906,7 @@ Object.assign(DeckPlayer.prototype, {
             if (k === 'pass') {                                        // 全回路走完 → 交付产出，休息后开新周期
                 phase = 'rest'; phaseT = REST_MS;
                 token.setAttribute('opacity', 0);
-                afterPhase = () => { if (stateEl) stateEl.classList.remove('on'); nextRoute(); token.setAttribute('opacity', .95); };
+                afterPhase = () => { if (stateEl) stateEl.classList.remove('on'); nextRoute(); setPos(route()[0]); setToken('#2563eb'); token.setAttribute('opacity', .95); };
             } else {                                                   // 打回路线走完：改代码处重启脉冲
                 nodePulse(0);
                 phase = 'pause'; phaseT = 450;
