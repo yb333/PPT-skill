@@ -150,27 +150,39 @@ body.presenting { cursor: pointer; }
 body.presenting .deck-bar, body.presenting .deck-menu,
 body.presenting .deck-progress, body.presenting .deck-sidebar { opacity: 0; pointer-events: none; }
 
-/* ===== 动画步进程序 fx 层（终态清空即还原静态页） ===== */
+/* ═══ DECK FX CSS:BEGIN — 唯一源 deck-studio/assets/effects/effects.css，勿手改 ═══ */
+/* =====================================================================
+   deck-studio 效果基建 · effects.css
+   步进程序（DECK_STEPS）与常驻流转（AMBIENT）的样式层。
+   用法：整体粘贴到 deck <style> 末尾。作者无需修改本文件；
+   暗色主题适配：覆盖 theme.md 的 --glass-* 与本文的 rgba 色值即可。
+   提取自参考实现 docs/emp/agent-concept_deck-studio.html（已验证）。
+   ===================================================================== */
+
+/* —— 步进程序 fx 层（DECK_STEPS；终态 = 静态整页）—— */
 .fx-layer .fx-veil { fill: #fff; opacity: 0; transition: opacity .45s ease; }
 .fx-layer .fx-veil.on { opacity: .78; }
-.fx-layer .fx-lit { fill: rgba(59,130,246,.3); stroke: rgba(37,99,235,.9); stroke-width: 1.6; }
+.fx-layer .fx-lit { fill: rgba(59,130,246,.3); stroke: rgba(37,99,235,.9); stroke-width: 1.6; transition: opacity .35s ease; }
+.fx-layer .fx-sumcover { fill: #fff; opacity: 0; transition: opacity .5s ease; }
+.fx-layer .fx-sumcover.on { opacity: 1; }
+.ambient-layer .fsidep { fill: rgba(59,130,246,.12); stroke: rgba(37,99,235,.75); stroke-width: 1.5; opacity: 0; animation: fsidep .85s ease-out 1 forwards; }
+@keyframes fsidep { 0% { opacity: .95; } 100% { opacity: 0; } }
 .fx-layer .fx-state { fill: rgba(29,78,216,.18); stroke: #1d4ed8; stroke-width: 2; }
 .fx-layer .fx-gate { fill: none; stroke: #f59e0b; stroke-width: 3; animation: fxgate 1s ease-in-out infinite; }
 @keyframes fxgate { 0%,100% { opacity: .3; } 50% { opacity: 1; } }
 .fx-layer .fx-pulse { fill: rgba(239,68,68,.16); stroke: #ef4444; stroke-width: 2; animation: fxpulse .9s ease-out 1 forwards; }
 @keyframes fxpulse { 0% { opacity: .85; } 100% { opacity: 0; } }
-/* ===== 常驻流转（ambient）：回路机制页试点 ===== */
-.ambient-layer .fpulse { fill: none; stroke: var(--c-info, #3b82f6); stroke-width: 2; opacity: 0; transform-box: fill-box; transform-origin: center; animation: fnodep .7s ease-out 1 forwards; }
+
+/* —— 常驻流转（AMBIENT）—— */
+/* fpulse 到站脉冲：ambient 巡航与 auto 光点动线共用（不染色，~750ms 即逝） */
+.ambient-layer .fpulse, .fx-layer .fpulse { fill: none; stroke: var(--c-info, #3b82f6); stroke-width: 2; opacity: 0; transform-box: fill-box; transform-origin: center; animation: fnodep .7s ease-out 1 forwards; }
 @keyframes fnodep { 0% { opacity: .9; transform: scale(.5); } 100% { opacity: 0; transform: scale(1.6); } }
 .ambient-layer .fgate { fill: none; stroke: #f59e0b; stroke-width: 3; animation: fxgate 1s ease-in-out infinite; }
 .ambient-layer .fstate { fill: rgba(29,78,216,.15); stroke: #1d4ed8; stroke-width: 1.5; opacity: 0; transition: opacity .4s ease; }
 .ambient-layer .fstate.on { opacity: 1; }
 .ambient-layer .ftoken { transition: fill .3s ease, opacity .4s ease; }
-.fx-layer .fx-sumcover { fill: #fff; opacity: 0; transition: opacity .5s ease; }
-.fx-layer .fx-sumcover.on { opacity: 1; }
-.fx-layer .fx-lit { transition: opacity .35s ease; }
-.ambient-layer .fsidep { fill: rgba(59,130,246,.12); stroke: rgba(37,99,235,.75); stroke-width: 1.5; opacity: 0; animation: fsidep .85s ease-out 1 forwards; }
-@keyframes fsidep { 0% { opacity: .95; } 100% { opacity: 0; } }
+/* ═══ DECK FX CSS:END ═══ */
+
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .2s !important; }
 }
@@ -1717,11 +1729,13 @@ Object.assign(DeckPlayer.prototype, {
    prefers-reduced-motion 静态；每页每次进入只演一遍，离页再来重演。
    作者只声明数据（deck 数据区，勿改本文件）：
      window.DECK_AUTO = { 页label: [ 微指令... ] };
-     微指令：['move', x1,y1, x2,y2, dur?, color?]  光点沿路径飞行（dur 缺省 500ms，color 缺省品牌蓝）
+     微指令：['flow', x1,y1, x2,y2, dur?, color?]  流线脉冲：一段"撑大的线"沿起点→终点流转后消失（dur 缺省 600ms，color 缺省 #60a5fa）
+             ['flows', [[x1,y1,x2,y2],...], dur?, color?]  多条流线同时流转（扇出/并行语义）
              ['pulse', [x,y,w,h]]              到站脉冲：区域中心蓝色涟漪，~750ms 即逝，不染色
-             ['lit', [x,y,w,h]]                （遗留）区域点亮——不染色法则下新 deck 勿用
-             ['wseq', [rect,...]]              （遗留）多区域连播——同上
-   序列收尾：光点自动淡出 + fx 层清空，页面 100% 恢复原样（终态不变式）。
+             ['lit', [x,y,w,h]]                （遗留·染色）区域点亮——不染色法则下禁用
+             ['wseq', [rect,...]]              （遗留·染色）多区域连播——同上
+   序列收尾：fx 层清空，页面 100% 恢复原样（终态不变式）；
+   序列绑定进页时的页号，换页即作废（防止旧序列画到新页上——串页事故 2026-09-24）。
    依赖：player.js（window.__deck + deckpage 事件）与 stepfx.js（fxLayer/
    fxEl/newToken/wait——本文件在混合层之后装配）。无数据时本模块不装配。
    ===================================================================== */
@@ -1730,7 +1744,7 @@ Object.assign(DeckPlayer.prototype, {
     const boot = () => {
         const deck = window.__deck;
         if (!deck) return;
-        let playedFor = null, skip = false, raf = 0;
+        let playedFor = null, skip = false, raf = 0, pageIdx = -1;
         const seq = () => (window.DECK_AUTO || {})[deck.slides[deck.current].dataset.label];
         function lit(rect) {
             const fx = deck.fxLayer();
@@ -1746,7 +1760,30 @@ Object.assign(DeckPlayer.prototype, {
             const c = deck.fxEl('circle', { cx: rect[0] + rect[2] / 2, cy: rect[1] + rect[3] / 2, r: 14 }, 'fpulse');
             setTimeout(() => c.remove(), 750);
         }
-        function move(x1, y1, x2, y2, dur, color) {
+        /* 流线脉冲：覆盖线与箭头同几何，短划（撑大段）经 stroke-dashoffset 从起点流转到终点后移除 */
+        function flow(x1, y1, x2, y2, dur, color) {
+            return new Promise(res => {
+                const fx = deck.fxLayer();
+                if (!fx || !deck.slides[deck.current].querySelector('svg')) return res();
+                const len = Math.max(1, Math.hypot(x2 - x1, y2 - y1));
+                const seg = Math.min(64, len * 0.45);
+                const line = deck.fxEl('line', { x1, y1, x2, y2, stroke: color || '#60a5fa',
+                    'stroke-width': 5, 'stroke-linecap': 'round', opacity: .9 });
+                line.setAttribute('stroke-dasharray', `${seg} ${len + seg}`);
+                line.setAttribute('stroke-dashoffset', seg);            // 起点前藏住
+                fx.appendChild(line);
+                const t0 = performance.now();
+                const tick = now => {
+                    if (skip || deck.current !== pageIdx) { line.remove(); return res(); }
+                    const k = Math.min(1, (now - t0) / dur);
+                    const e = 1 - Math.pow(1 - k, 3);
+                    line.setAttribute('stroke-dashoffset', seg - (seg + len) * e);
+                    if (k < 1) raf = requestAnimationFrame(tick); else { line.remove(); res(); }
+                };
+                raf = requestAnimationFrame(tick);
+            });
+        }
+        function move(x1, y1, x2, y2, dur, color) {              // （遗留·光点）不染色法则下新 deck 勿用
             return new Promise(res => {
                 if (!deck.slides[deck.current].querySelector('svg')) return res();
                 const token = deck.newToken(color || '#2563eb');
@@ -1764,18 +1801,22 @@ Object.assign(DeckPlayer.prototype, {
         }
         async function run() {
             const micros = seq(); if (!micros) return;
+            pageIdx = deck.current;                              // 序列绑定进页时的页面：换页即作废（防串页）
             deck.autoBusy = true; skip = false;
+            const stale = () => deck.current !== pageIdx;
             for (const m of micros) {
+                if (stale()) { deck.autoBusy = false; return; }
                 if (skip) { if (m[0] === 'lit') { const fx = deck.fxLayer(); const e = deck.fxEl('rect', { x: m[1][0], y: m[1][1], width: m[1][2], height: m[1][3], rx: 8, class: 'fx-lit' }); e.setAttribute('opacity', 1); } else if (m[0] === 'wseq') { for (const r of m[1]) { const fx = deck.fxLayer(); if (!fx) break; const e = deck.fxEl('rect', { x: r[0], y: r[1], width: r[2], height: r[3], rx: 8, class: 'fx-lit' }); e.setAttribute('opacity', 1); } } continue; }
                 if (m[0] === 'lit') await lit(m[1]);
                 else if (m[0] === 'wseq') { for (const r of m[1]) await lit(r); }
+                else if (m[0] === 'flow') await flow(m[1], m[2], m[3], m[4], m[5] || 600, m[6]);
+                else if (m[0] === 'flows') await Promise.all(m[1].map(w => flow(w[0], w[1], w[2], w[3], m[2] || 900, m[3])));
                 else if (m[0] === 'move') await move(m[1], m[2], m[3], m[4], m[5] || 500, m[6]);
-                else if (m[0] === 'pulse') { pulse(m[1]); await deck.wait(420); }
+                else if (m[0] === 'pulse') { pulse(m[1]); await deck.wait(skip ? 60 : 420); }
             }
+            if (stale()) { deck.autoBusy = false; return; }      // 已换页：fx 归新页面序列所有
             deck.autoBusy = false;
-            const tk = deck.fxToken;                     // 收尾：光点淡出，页面恢复原样
-            if (tk) { tk.style.transition = 'opacity .5s ease'; tk.setAttribute('opacity', 0); }
-            setTimeout(() => { if (!deck.autoBusy && window.__deck === deck) deck.clearFx(); }, 600);
+            setTimeout(() => { if (!deck.autoBusy && deck.current === pageIdx) deck.clearFx(); }, 700);
         }
         function onpage() {
             const label = deck.slides[deck.current].dataset.label;
@@ -2013,14 +2054,14 @@ Object.assign(DeckPlayer.prototype, {
         持久染色机制（lit/wseq/w/state/veil）本 deck 一律不用，讲者强调用聚光灯（P）。
    地图：封面=入场动效(CSS) · 背景/形态/校验/编排/分流/进展/推广=一次性光点动线 ·
         流转=常驻「最复杂的一天」 · 成果/价值=数字滚动 · 五页总结条=结论后置 */
-window.DECK_AUTO = {   /* A 型光点动线：进页演一遍即静止；点击=快进；坐标 = 各页 svg viewBox */
-    '背景': [['move',125,56,520,56,900],['pulse',[252,26,536,60]],['move',520,56,915,56,900],['pulse',[820,32,190,48]]],                              // DDLC 定位链
-    '形态': [['move',155,44,485,44,800],['pulse',[340,26,290,36]],['move',485,44,840,44,800],['pulse',[670,26,340,36]]],                              // spec 演化链
-    '编排': [['pulse',[30,36,310,176]],['move',185,124,702,66,700],['pulse',[394,40,616,52]],['move',702,66,702,128,500],['pulse',[394,102,616,52]],['move',702,128,702,190,500],['pulse',[394,164,616,52]],['move',702,190,142,274,700],['move',142,274,900,274,1100],['pulse',[802,254,196,40]]],   // 起三岗 + 上报路由
-    '校验': [['pulse',[30,32,176,130]],['move',118,97,318,97,600],['pulse',[230,32,176,130]],['move',318,97,518,97,600],['pulse',[430,32,176,130]],['move',518,97,718,97,600],['pulse',[630,32,176,130]],['move',718,97,920,97,600],['pulse',[830,32,180,130]]],   // 五道闸串行
-    '分流': [['move',710,118,688,180,300,'#ef4444'],['move',688,180,560,180,350,'#ef4444'],['move',560,180,540,118,300,'#ef4444'],['pulse',[454,84,172,68]],['move',540,118,710,118,600],['move',710,118,710,212,300,'#ef4444'],['move',710,212,505,212,400,'#ef4444'],['move',505,212,540,118,300,'#ef4444'],['move',540,118,710,118,600],['move',710,118,732,244,400,'#ef4444'],['move',732,244,290,244,600,'#ef4444'],['move',290,244,290,118,300,'#ef4444'],['pulse',[234,84,112,68]]],   // 五线骑线：SQL/DQ 回建造、质量退设计
-    '进展': [['move',186,182,519,182,700],['pulse',[363,24,313,316]],['move',519,182,853,182,700],['pulse',[696,24,314,316]]],                          // 三栏递进
-    '推广': [['move',170,58,490,58,800],['pulse',[350,26,280,64]],['move',490,58,840,58,800],['pulse',[670,26,340,64]]],                              // 推广路径三段
+window.DECK_AUTO = {   /* A 型流线动线：撑大段沿箭头流转 + 到站脉冲，进页演一遍即静止；点击=快进 */
+    '背景': [['flow',125,56,520,56,900],['pulse',[252,26,536,60]],['flow',520,56,915,56,900],['pulse',[820,32,190,48]]],                              // DDLC 定位链
+    '形态': [['flow',155,44,485,44,800],['pulse',[340,26,290,36]],['flow',485,44,840,44,800],['pulse',[670,26,340,36]]],                              // spec 演化链
+    '编排': [['pulse',[30,36,310,176]],['flows',[[185,124,702,66],[185,124,702,128],[185,124,702,190]],900],['pulse',[394,40,616,52]],['pulse',[394,102,616,52]],['pulse',[394,164,616,52]],['flow',702,190,142,274,700],['flow',142,274,900,274,1100],['pulse',[802,254,196,40]]],   // 扇出起三岗 + 上报路由
+    '校验': [['pulse',[30,32,176,130]],['flow',118,97,318,97,600],['pulse',[230,32,176,130]],['flow',318,97,518,97,600],['pulse',[430,32,176,130]],['flow',518,97,718,97,600],['pulse',[630,32,176,130]],['flow',718,97,920,97,600],['pulse',[830,32,180,130]]],   // 五道闸串行
+    '分流': [['flow',710,118,688,180,300,'#ef4444'],['flow',688,180,560,180,350,'#ef4444'],['flow',560,180,540,118,300,'#ef4444'],['pulse',[454,84,172,68]],['flow',540,118,710,118,600],['flow',710,118,710,212,300,'#ef4444'],['flow',710,212,505,212,400,'#ef4444'],['flow',505,212,540,118,300,'#ef4444'],['flow',540,118,710,118,600],['flow',710,118,732,152,250,'#ef4444'],['flow',732,152,732,244,350,'#ef4444'],['flow',732,244,290,244,600,'#ef4444'],['flow',290,244,290,118,300,'#ef4444'],['pulse',[234,84,112,68]]],   // 五线流转：SQL/DQ 回建造、质量退设计
+    '进展': [['flow',186,182,519,182,700],['pulse',[363,24,313,316]],['flow',519,182,853,182,700],['pulse',[696,24,314,316]]],                          // 三栏递进
+    '推广': [['flow',170,58,490,58,800],['pulse',[350,26,280,64]],['flow',490,58,840,58,800],['pulse',[670,26,340,64]]],                              // 推广路径三段
 };
 window.DECK_STEPS = {  /* 结论后置：sumhide 放映态进页自动遮盖，sumshow 末拍揭示 */
     '形态': [['sumhide',[30,340,980,34]],['sumshow']],
