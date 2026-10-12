@@ -158,9 +158,11 @@ window.DECK_COUNTUP = {
 
 ## 六、作者接口 2：AMBIENT 参数区（常驻流转）
 
-仅限**闭环/迭代**内容，每 deck 至多一处。并行光点：`count`（缺省 1）+ `staggerMs`
-（错拍启动，缺省 1500ms）——多光点沿同一航线错拍巡航，各自独立判定/停泊/交付，
-表达流水线的并行语义。路线支持单判定 `decide` 或多点判定 `decides`
+仅限**闭环/迭代**内容，每 deck 至多一处。航线模型（二选一）：
+①`count`（缺省 1）+ `staggerMs`（错拍，缺省 1500ms）——N 个光点沿 routes[0] 错拍巡航（吞吐语义）；
+②`lanes: [{ route, delay, svg }, ...]`——每条光道独立路线/延迟/**页内第几个 svg**（对比/多图语义：
+左右两图各一光点同时巡航）。各光道独立判定/停泊/交付；状态区坐标随 lanes[0] 的 svg。
+路线支持单判定 `decide` 或多点判定 `decides`
 （`{序号: {ms, gate, then}}`——色彩只由判定驱动，可编排「一条路线走满全部回路」的连续剧，
 如 tech-review 流转页「最复杂的一天」）。引擎在标记块内（勿改），作者只声明 `window.DECK_AMBIENT` 数据：`pageLabel`、`speed`、`decideMs`、`gateMs`、`restMs`、`routes`（回路路线按演示顺序，`backFrom` 标打回段、`decide` 声明判定停顿与转向）、`nodes`、`stateAt`/`stateRect`。完整格式见文件内注释。红线：离页必停（已内置）、reduced-motion 静态（已内置）、禁止循环闪烁装饰。
 
