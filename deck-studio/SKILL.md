@@ -84,7 +84,7 @@ node <skill>/scripts/verify/e2e_check.mjs <deck.html>        # ③ 真实交互�
 node <skill>/scripts/verify/shot.mjs <deck.html> <data-label> /tmp/page.jpg   # ④ 重点页目检
 ```
 
-人工清单（门禁之外逐项过）：SVG viewBox ≥ 内容最大 y + padding；标签不重叠（相近 y 间隔 ≥14px）；卡片精确包裹内容；中文术语首现附英文括号；默认路径无绿/橙/紫（蓝板宪法）；渐变垂直方向；SVG `font-size="N"` 无 px 后缀；正文 ≥12px。完整清单与协作纪律（按页记录修改、逐章引导反馈、结构性意见在初版轮消化）见 `references/process.md`。
+人工清单（门禁之外逐项过）：SVG viewBox ≥ 内容最大 y + padding；标签不重叠（相近 y 间隔 ≥14px）；卡片精确包裹内容；中文术语首现附英文括号；默认路径无绿/橙/紫（蓝板宪法）；渐变垂直方向；SVG `font-size="N"` 无 px 后缀；正文字号与单页文字量已由门禁自动检查（HTML ≥14px、SVG 有效 ≥9px、单页 ≤320 字——投影场景按 layout.md 场景分档升档）。完整清单与协作纪律（按页记录修改、逐章引导反馈、结构性意见在初版轮消化）见 `references/process.md`。
 
 ## Phase 6: PPTX → HTML 提取（Mode B）
 

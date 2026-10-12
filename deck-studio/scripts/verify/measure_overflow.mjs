@@ -15,6 +15,9 @@
 // 输出: 每页 label、slide 溢出 Y/X（像素）、内层 overflow:hidden 裁切数量与 top 条目。
 //
 // 判定: slide 级溢出（Y/X > 0）或内层裁切 > NESTED_FAIL_PX 即失败。
+// 字号/密度审计（layout.md「字号场景分档与边界值」）：单页可见文字（不含 SVG 图内标签）
+// > 320 字硬顶（240 字 6×6 建议线仅提示）；HTML 文本字号 < 14px 硬限；SVG 图内文字
+// 有效字号（viewBox 缩放折算到画布）< 9px 硬限。
 // 内层裁切必须判失败——deck-studio 的 .slide-content 自带 overflow:hidden（双保险），
 // 内容超高时 slide 级溢出恒为 0，真实丢内容全部发生在内层裁切上（冒烟验证证实）。
 //
@@ -103,10 +106,31 @@ try {
           clips.push({ dir: 'X', amt: Math.round(e.scrollWidth - e.clientWidth), txt });
       }
       clips.sort((a, b) => b.amt - a.amt);
+      // —— 字号/密度审计数据 ——
+      let htmlChars = 0, htmlMin = Infinity, svgMin = Infinity;
+      const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT);
+      while (walker.nextNode()) {
+        const t = walker.currentNode.textContent.trim();
+        if (!t) continue;
+        const parent = walker.currentNode.parentElement;
+        if (parent.closest('svg')) continue;                       // SVG 图内文字单列
+        htmlChars += t.replace(/\s+/g, '').length;
+        const fs = parseFloat(getComputedStyle(parent).fontSize);
+        if (fs > 0) htmlMin = Math.min(htmlMin, fs);
+      }
+      node.querySelectorAll('svg text').forEach(t => {
+        const svg = t.ownerSVGElement;
+        const attr = parseFloat(t.getAttribute('font-size') || getComputedStyle(t).fontSize);
+        const scale = svg && svg.viewBox.baseVal.width ? svg.getBoundingClientRect().width / svg.viewBox.baseVal.width : 1;
+        const eff = attr * scale;                                  // viewBox 单位折算到画布实际尺寸
+        if (eff > 0) svgMin = Math.min(svgMin, eff);
+      });
       return { y: Math.round(node.scrollHeight - node.clientHeight),
                x: Math.round(node.scrollWidth - node.clientWidth),
                nClips: clips.length, top: clips.slice(0, 6),
-               worst: clips.length ? clips[0].amt : 0 };
+               worst: clips.length ? clips[0].amt : 0,
+               typo: { htmlChars, htmlMin: isFinite(htmlMin) ? Math.round(htmlMin) : null,
+                       svgMin: isFinite(svgMin) ? Math.round(svgMin * 10) / 10 : null } };
     }, TRUNC);
     console.log(`--- ${t.disp} ---  slide overflow Y=${r.y} X=${r.x}  nested clips=${r.nClips}`);
     for (const c of r.top) console.log(`    clip ${c.dir} +${c.amt}px  ${JSON.stringify(c.txt)}`);
@@ -118,6 +142,13 @@ try {
       console.log(`    ✗ 内层裁切 ${r.worst}px > ${NESTED_FAIL_PX}px，存在被 overflow:hidden 裁掉看不见的内容`);
       exitCode = 1;
     }
+    // —— 字号/密度审计（✗ 硬限阻断 / ⚠ 建议不阻断；阈值依据见 layout.md 边界值节）——
+    const ty = r.typo;
+    console.log(`    文字量=${ty.htmlChars} 字（建议≤240/硬顶320）  字号 html≥${ty.htmlMin ?? '—'}px（硬限14）  svg有效≥${ty.svgMin ?? '—'}px（硬限9）`);
+    if (ty.htmlChars > 320) { console.log('    ✗ 单页文字量超 320 字硬顶——超出即不是合理的表达，应拆页'); exitCode = 1; }
+    else if (ty.htmlChars > 240) console.log('    ⚠ 文字量超 240 字（6×6 边界）：建议拆页或精简');
+    if (ty.htmlMin != null && ty.htmlMin < 14) { console.log(`    ✗ HTML 文本最小字号 ${ty.htmlMin}px < 14px 硬下限`); exitCode = 1; }
+    if (ty.svgMin != null && ty.svgMin < 9) { console.log(`    ✗ SVG 图内文字有效字号 ${ty.svgMin}px < 9px 硬下限`); exitCode = 1; }
   }
 } catch (e) {
   console.error('执行失败（浏览器/页面基础设施错误）: ' + (e?.message ?? e));

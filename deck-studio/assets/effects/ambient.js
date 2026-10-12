@@ -14,9 +14,9 @@
        —— 航线模型（二选一）：——
        count: 2,                 // 简写：count 个光点沿 routes[0] 错拍巡航（吞吐/并行语义）
        staggerMs: 1500,          //   错拍启动间隔（缺省 1500ms）
-       lanes: [                  // 完整形式：每条光道独立路线/延迟/目标 svg（对比/多图语义）
+       lanes: [                  // 完整形式：每条光道独立路线/延迟/目标 svg，条数不限（对比/多图/多线并行语义）
          { route: 0, delay: 0,   svg: 0 },   // route=routes 索引；svg=页内第几个 svg（缺省 0）
-         { route: 1, delay: 600, svg: 1 },   // 对比场景：左右两图各一光点同时巡航
+         { route: 1, delay: 600, svg: 1 },   // 例：左右两图各一光点；三图对比就再补第三条
        ],
        routes: [                 // 回路路线：按演示顺序排列，全部走完回起点开新周期
          { kind: 'fail1', backFrom: 4, decide: { at: 4, ms: decideMs, then: 'red' },
