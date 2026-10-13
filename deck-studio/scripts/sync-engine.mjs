@@ -28,10 +28,6 @@ const REPO = join(ROOT, '..');                              // 仓根
 const CHECK = process.argv.includes('--check');
 const EXPLICIT = process.argv.slice(2).filter(a => !a.startsWith('--'));
 
-const JS_SOURCES = ['player.js', 'stepfx.js', 'auto.js', 'countup.js', 'ambient.js', 'exporter.js']
-    .map(f => readFileSync(join(ROOT, 'assets/effects', f), 'utf8').trimEnd());
-const FX_CSS = readFileSync(join(ROOT, 'assets/effects/effects.css'), 'utf8').trimEnd();
-
 const COLLECTOR_BEGIN = '/* ═══ COLLECTOR:BEGIN — 自 scripts/html2pptx/editable-scene.mjs 同步，勿手改（改收集器→两处源→sync） ═══ */';
 const COLLECTOR_END = '/* ═══ COLLECTOR:END ═══ */';
 const collectorSource = () => {
@@ -41,6 +37,22 @@ const collectorSource = () => {
     return src.slice(start, end).trimEnd().replace('export function collectEditableScene', 'function collectEditableScene');
 };
 const collectorBlock = () => COLLECTOR_BEGIN + '\n' + collectorSource() + '\n' + COLLECTOR_END;
+
+// —— 预同步：exporter.js 内嵌收集器先刷新为 editable-scene.mjs 最新版（源单点），再打包引擎块 ——
+{
+    const exporterPath = join(ROOT, 'assets/effects/exporter.js');
+    let exp = readFileSync(exporterPath, 'utf8');
+    const c0 = exp.indexOf(COLLECTOR_BEGIN);
+    const e0 = c0 >= 0 ? exp.indexOf(COLLECTOR_END, c0) : -1;
+    if (c0 >= 0 && e0 > c0) {
+        const updated = exp.slice(0, c0) + collectorBlock() + exp.slice(e0 + COLLECTOR_END.length);
+        if (updated !== exp) { writeFileSync(exporterPath, updated); console.log('  synced exporter.js collector'); }
+    }
+}
+
+const JS_SOURCES = ['player.js', 'stepfx.js', 'auto.js', 'countup.js', 'ambient.js', 'exporter.js']
+    .map(f => readFileSync(join(ROOT, 'assets/effects', f), 'utf8').trimEnd());
+const FX_CSS = readFileSync(join(ROOT, 'assets/effects/effects.css'), 'utf8').trimEnd();
 const ENGINE_BEGIN = '/* ═══ DECK ENGINE:BEGIN';
 const ENGINE_END = '/* ═══ DECK ENGINE:END ═══ */';
 const CSS_BEGIN = '/* ═══ DECK FX CSS:BEGIN';

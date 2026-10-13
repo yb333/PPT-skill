@@ -1979,12 +1979,16 @@ function collectEditableScene(slideIndex) {
     const key = [...ownContext, phase, 0, paint.length];
     paint.push({ item, key });
   }
+  const firstFontFamily = style => {
+      const first = (style.fontFamily.match(/"?([^";,]+)"?/) || [])[1]?.trim() || 'Microsoft YaHei';
+      return /monospace/i.test(first) ? 'Courier New' : first;      // CSS 泛型等宽 → PPT 可解析的真实字体
+  };
   function font(style, element) {
     const ink = color(style.color);
     const scale = pixelScale(element);
     return {
-      // 网页字体不随 PPTX 嵌入，统一微软雅黑，避免 Office 随机回退成宋体等字体。
-      fontFamily: 'Microsoft YaHei',
+      // 保留网页字体的首个具名字族，与 HTML 观感一致；缺字体的机器由 Office 自行回退。
+      fontFamily: firstFontFamily(style),
       fontSize: Math.max(2, px(style.fontSize) * scale), color: ink.hex, opacity: ink.alpha,
       bold: Number(style.fontWeight) >= 600 || style.fontWeight === 'bold', italic: style.fontStyle === 'italic',
       underline: style.textDecorationLine.includes('underline'), charSpacing: px(style.letterSpacing) * scale,
@@ -2215,9 +2219,10 @@ function collectEditableScene(slideIndex) {
         const xvp = rect0.left + x * ux, yvp = rect0.top + y * uy;
         const left = anchor === 'middle' ? xvp - w / 2 : anchor === 'end' ? xvp - w : xvp;
         const height = fontSize * 1.35;
+        const family = firstFontFamily(getComputedStyle(node));
         const text = { type: 'text', ...canvasRect({ left, top: yvp - fontSize * 0.85, width: w, height }), width: w + 2, wrap: false,
           paragraphs: [{ align: anchor === 'middle' ? 'center' : anchor === 'end' ? 'right' : 'left',
-            runs: [{ text: content, fontFamily: 'Microsoft YaHei', fontSize, color: fill ? fill.hex : '000000', opacity: fill ? fill.alpha : 1, bold: weight >= 600 }] }] };
+            runs: [{ text: content, fontFamily: family, fontSize, color: fill ? fill.hex : '000000', opacity: fill ? fill.alpha : 1, bold: weight >= 600 }] }] };
         emit(text, node);
       } else if (tag === 'path') {
         const d = node.getAttribute('d');
