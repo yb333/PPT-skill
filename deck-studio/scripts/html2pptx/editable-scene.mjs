@@ -198,6 +198,23 @@ export function collectEditableScene(slideIndex) {
   }
   /* SVG 图表分解：rect/line/text → 原生形状/连接线/文本框（可编辑）；path 弧线走抠图。
      坐标：viewBox 用户单位 × 缩放映射到画布，再复用 box() 换算场景坐标。 */
+  function parsePathD(d) {
+    /* deck 图表词汇表：绝对坐标 M/L/H/V/Q/Z（弧线=带 Q 拐角的折线或二次曲线） */
+    const tokens = d.match(/[MLHVQZ]|-?[\d.]+/g) || [];
+    const segs = [];
+    let i = 0, cx = 0, cy = 0, start = [0, 0];
+    const num = () => parseFloat(tokens[i++]);
+    while (i < tokens.length) {
+      const cmd = tokens[i++];
+      if (cmd === 'M') { cx = num(); cy = num(); start = [cx, cy]; segs.push({ t: 'M', p: [cx, cy] }); }
+      else if (cmd === 'L') { cx = num(); cy = num(); segs.push({ t: 'L', p: [cx, cy] }); }
+      else if (cmd === 'H') { cx = num(); segs.push({ t: 'L', p: [cx, cy] }); }
+      else if (cmd === 'V') { cy = num(); segs.push({ t: 'L', p: [cx, cy] }); }
+      else if (cmd === 'Q') { const c = [num(), num()], p2 = [num(), num()]; cx = p2[0]; cy = p2[1]; segs.push({ t: 'Q', c, p: p2 }); }
+      else if (cmd === 'Z') { segs.push({ t: 'Z' }); cx = start[0]; cy = start[1]; }
+    }
+    return segs;
+  }
   function visitSvg(svg) {
     if (svg.classList.contains('fx-layer') || svg.classList.contains('ambient-layer')) return;   // 动画层不进快照
     const rect0 = svg.getBoundingClientRect();
@@ -262,7 +279,27 @@ export function collectEditableScene(slideIndex) {
             runs: [{ text: content, fontFamily: 'Microsoft YaHei', fontSize, color: fill ? fill.hex : '000000', opacity: fill ? fill.alpha : 1, bold: weight >= 600 }] }] };
         emit(text, node);
       } else if (tag === 'path') {
-        raster(node, 'subtree', 'SVG 弧线已保留为图片');        // v1：弧线光栅化（透明底）
+        const d = node.getAttribute('d');
+        if (!d) continue;
+        const segs = parsePathD(d);
+        if (segs.length < 2) continue;
+        const pts = [];
+        for (const sg of segs) { pts.push(sg.p); if (sg.c) pts.push(sg.c); }
+        const minX = Math.min(...pts.map(p => p[0])), maxX = Math.max(...pts.map(p => p[0]));
+        const minY = Math.min(...pts.map(p => p[1])), maxY = Math.max(...pts.map(p => p[1]));
+        const stroke = svgPaint(node.getAttribute('stroke'), defs);
+        if (!stroke) continue;
+        const rel = vrOf(minX, minY, maxX - minX, maxY - minY);
+        const origin = [rect0.left + minX * ux, rect0.top + minY * uy];
+        const relSegs = segs.map(sg => {
+          const relPt = p => [Math.round((p[0] - minX) * ux * 100) / 100, Math.round((p[1] - minY) * uy * 100) / 100];
+          const out = { t: sg.t, p: relPt(sg.p) };
+          if (sg.c) out.c = relPt(sg.c);
+          return out;
+        });
+        const shape = { type: 'freeform', ...canvasRect(rel), segs: relSegs,
+          stroke: { color: stroke.hex, width: (px(node.getAttribute('stroke-width')) || 1.5) * ux, dash: !!node.getAttribute('stroke-dasharray') } };
+        emit(shape, node, true);
       }
     }
   }

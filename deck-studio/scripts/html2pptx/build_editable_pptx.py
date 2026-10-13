@@ -176,10 +176,43 @@ class Drawing:
             f'<p:txBody>{self.text_body(element.get("paragraphs"), wrap=element.get("wrap", True), top_inset=element.get("topInset", 0))}</p:txBody></p:sp>'
         )
 
+    def freeform(self, element, identifier):
+        """SVG path（M/L/H/V/Q/Z 折线+二次曲线）→ custGeom 自由曲线；Q 精确升格为三次贝塞尔，顶点可在 PPT 里编辑。"""
+        segs = sequence(element.get("segs"), "路径段")
+        width = number(element.get("width"), "路径宽度", 0)
+        height = number(element.get("height"), "路径高度", 0)
+        commands = []
+        for seg in segs:
+            record(seg, "路径段")
+            point = lambda p: f'<a:pt x="{round(number(p[0], "路径x", 0))}" y="{round(number(p[1], "路径y", 0))}"/>'
+            if seg["t"] == "M":
+                commands.append(f"<a:moveTo>{point(seg['p'])}</a:moveTo>")
+            elif seg["t"] == "L":
+                commands.append(f"<a:lnTo>{point(seg['p'])}</a:lnTo>")
+            elif seg["t"] == "Q":
+                previous = commands and 1
+                c, p2 = seg["c"], seg["p"]
+                commands.append(f"<a:cubicBezTo>{point(c)}{point(c)}{point(p2)}</a:cubicBezTo>")
+            elif seg["t"] == "Z":
+                commands.append("<a:close/>")
+        path_w = max(1, round(number(element.get("width"), "路径宽度", 0)))
+        path_h = max(1, round(number(element.get("height"), "路径高度", 0)))
+        geometry_xml = (f'<a:custGeom><a:avLst/><a:gdLst/><a:ahLst/><a:cxnLst/><a:rect/><a:pathLst>'
+                        f'<a:path w="{path_w}" h="{path_h}">{"".join(commands)}</a:path></a:pathLst></a:custGeom>')
+        stroke = element.get("stroke") or {}
+        stroke_color = color(stroke.get("color", "#000000"))
+        stroke_width = self.y(number(stroke.get("width", 1.5), "线宽", 0))
+        dash = '<a:prstDash val="dash"/>' if stroke.get("dash") else '<a:prstDash val="solid"/>'
+        properties = self.transform(self.box(element)) + geometry_xml
+        properties += f'<a:ln w="{stroke_width}">{solid_fill(stroke_color, 1)}{dash}</a:ln>'
+        return f'<p:sp><p:nvSpPr><p:cNvPr id="{identifier}" name="自由曲线 {identifier}"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr>{properties}</p:spPr></p:sp>'
+
     def shape(self, element, identifier):
         geometry = element.get("geometry")
+        if geometry == "freeform":
+            return self.freeform(element, identifier)
         if geometry not in ("rect", "roundRect", "ellipse", "line"):
-            raise ValueError("形状必须是 rect、roundRect、ellipse 或 line")
+            raise ValueError("形状必须是 rect、roundRect、ellipse、line 或 freeform")
         box = self.box(element, line=geometry == "line")
         adjustment = ""
         if "radius" in element:
@@ -299,7 +332,7 @@ def build_editable_pptx(manifest_dir, output, embed_html=None):
         for identifier, element in enumerate(elements, 2):
             record(element, "幻灯片元素")
             kind = element.get("type")
-            if kind in ("text", "shape", "table"):
+            if kind in ("text", "shape", "table", "freeform"):
                 objects.append(getattr(drawing, kind)(element, identifier))
             elif kind == "image":
                 data, extension = local_media(directory, element.get("file"))

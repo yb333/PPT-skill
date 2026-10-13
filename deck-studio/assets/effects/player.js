@@ -17,7 +17,7 @@
    混合层（stepfx.js/auto.js/ambient.js）依赖：window.__deck、syncChrome
    内派发 deckpage 事件、data-label 页标识。本文件声明版本号供门禁断言。
    ===================================================================== */
-window.DECK_ENGINE_VERSION = '1.4.0';
+window.DECK_ENGINE_VERSION = '1.5.0';
 
 class DeckPlayer {
     constructor() {
