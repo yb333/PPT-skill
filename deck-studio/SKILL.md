@@ -114,7 +114,7 @@ python3 <skill>/scripts/html2pptx/convert.py <deck.html> <out.pptx>   # image �
 | `references/player.md` | Phase 4 —— 舞台行为契约与播放器壳 DOM（引擎源码以 assets/effects 为准） |
 | `references/svg-diagrams.md` | Phase 4 —— 架构图/流程图/图表规范与模板 |
 | `references/animation.md` | Phase 2/4 —— 动画申报制：流线语言法则、机制速查表、四类声明格式、节奏依据 |
-| `assets/effects/` | Phase 4 —— 引擎唯一源五件套（player.js 核心 / stepfx.js 步进 / auto.js 流线动线 / countup.js 数字滚动 / ambient.js 常驻流转 + effects.css）：标记块由 sync-engine 写入，**严禁手改**；作者只写数据声明 |
+| `assets/effects/` | Phase 4 —— 引擎唯一源六件套（player.js 核心 / stepfx.js 步进 / auto.js 流线动线 / countup.js 数字滚动 / ambient.js 常驻流转 / exporter.js 一键导出 + effects.css）：标记块由 sync-engine 写入，**严禁手改**；作者只写数据声明。deck-bar 含 #pptxBtn 时按 P 一键导出快照 PPTX |
 | `assets/templates/yunshan.html` | Phase 4 —— 品牌模板与全页型骨架基准（封面/内容页/卡片网格/表格混排/深蓝金句/结束页）：复制后改填写区、按页型增删 section、替换占位文案 |
 | `scripts/` | Phase 4/5/7 —— sync-engine（引擎写入/校验）、verify 四件套（溢出/截图/e2e/目检）、html2pptx（导出） |
 | `references/copywriting.md` | Phase 1/2/4 —— 文案规范（中文、标题句式、数字） |

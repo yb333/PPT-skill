@@ -19,7 +19,7 @@
 | 资产 | 作用 | 作者要写的 |
 |------|------|-----------|
 | `assets/effects/effects.css` | fx 高亮/闸口环/脉冲/常驻流转的全部样式 | 无（标记块由 sync-engine 写入） |
-| `assets/effects/player.js` 等 JS 五件 | 核心类/步进/自动连播/数字滚动/常驻流转，deck 内 ═══ DECK ENGINE ═══ 标记块 | 无（严禁手改）+ `DECK_STEPS`/`DECK_AUTO`/`DECK_COUNTUP`/`DECK_AMBIENT` 数据声明 |
+| `assets/effects/player.js` 等 JS 六件 | 核心类/步进/自动连播/数字滚动/常驻流转/一键导出，deck 内 ═══ DECK ENGINE ═══ 标记块 | 无（严禁手改）+ `DECK_STEPS`/`DECK_AUTO`/`DECK_COUNTUP`/`DECK_AMBIENT` 数据声明 |
 | `references/player.md` | 播放器壳（浏览/放映双模式、缩略图、聚光灯） | 无（照 player.md 实现） |
 
 **作者的三样输入**：

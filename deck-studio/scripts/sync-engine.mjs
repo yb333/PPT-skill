@@ -2,7 +2,7 @@
 // sync-engine.mjs — 引擎唯一源同步器（deck-studio 引擎纪律的执行工具）
 //
 // 背景：每个 deck 是单文件 HTML，引擎以标记块内联其中。多副本手改必然漂移，
-// 故引擎只允许在 assets/effects/ 五件套里改，deck 内一律标记块 + 本脚本同步。
+// 故引擎只允许在 assets/effects/ 六件套里改，deck 内一律标记块 + 本脚本同步。
 //
 // 用法:
 //   node sync-engine.mjs [路径...] [--check]
@@ -28,7 +28,7 @@ const REPO = join(ROOT, '..');                              // 仓根
 const CHECK = process.argv.includes('--check');
 const EXPLICIT = process.argv.slice(2).filter(a => !a.startsWith('--'));
 
-const JS_SOURCES = ['player.js', 'stepfx.js', 'auto.js', 'countup.js', 'ambient.js']
+const JS_SOURCES = ['player.js', 'stepfx.js', 'auto.js', 'countup.js', 'ambient.js', 'exporter.js']
     .map(f => readFileSync(join(ROOT, 'assets/effects', f), 'utf8').trimEnd());
 const FX_CSS = readFileSync(join(ROOT, 'assets/effects/effects.css'), 'utf8').trimEnd();
 
