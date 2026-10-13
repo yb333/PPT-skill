@@ -1925,7 +1925,7 @@ window.DeckExport = (function () {
         deck.flashHint('playerHint', message, 3000);
     }
 
-    /* ==== 场景收集器（自 editable-scene.mjs 原样移植，改引擎请两处同步） ==== */
+    /* ═══ COLLECTOR:BEGIN — 自 scripts/html2pptx/editable-scene.mjs 同步，勿手改（改收集器→两处源→sync） ═══ */
 function collectEditableScene(slideIndex) {
   const canvas = document.querySelectorAll('section.slide')[slideIndex];   // deck-studio 契约
   const bounds = canvas.getBoundingClientRect();
@@ -2240,7 +2240,7 @@ function collectEditableScene(slideIndex) {
       const clipped = (['hidden', 'clip'].includes(style.overflowX) && element.scrollWidth > element.clientWidth + 2) || (['hidden', 'clip'].includes(style.overflowY) && element.scrollHeight > element.clientHeight + 2);
       const pseudo = pseudos.some(p => p.content !== '""');
       if (element.tagName === 'svg') { visitSvg(element); return; }   // SVG 图表分解为原生可编辑对象
-      if (['CANVAS', 'IMG', 'VIDEO', 'IFRAME', 'OBJECT'].includes(element.tagName) || transformed || clipped || pseudo || Number(style.opacity) < 1 || style.filter !== 'none' || style.clipPath !== 'none' || style.maskImage !== 'none' || style.mixBlendMode !== 'normal' || style.textShadow !== 'none' || px(style.webkitTextStrokeWidth) > 0) {
+      if (['CANVAS', 'IMG', 'VIDEO', 'IFRAME', 'OBJECT'].includes(element.tagName) || transformed || clipped || pseudo || Number(style.opacity) < 1 || style.filter !== 'none' || style.clipPath !== 'none' || style.maskImage !== 'none' || style.mixBlendMode !== 'normal' || px(style.webkitTextStrokeWidth) > 0) {   // text-shadow 不再触发转图片：阴影丢弃，文字保持可编辑
         raster(element, 'subtree', '复杂图形或特殊效果已保留为图片'); return;
       }
     }
@@ -2304,11 +2304,9 @@ function collectEditableScene(slideIndex) {
   window.__aicoEditableCapture = { targets, canvas };
   return { name: canvas.querySelector('section[data-label]')?.getAttribute('data-label') || `第 ${slideIndex + 1} 页`, elements, warnings: [...warnings] };
 }
+/* ═══ COLLECTOR:END ═══ */
 
-
-    /* —— 可编辑模式：场景收集器自 editable-scene.mjs 移植（上方），绘图 XML 组装为下方 EditableDrawing —— */
-
-    /* —— 页内元素抠图：foreignObject 透明底 PNG（图片类对象用） —— */
+/* —— 页内元素抠图：foreignObject 透明底 PNG（图片类对象用） —— */
     async function elementPng(target) {
         const element = target.element;
         const rect = element.getBoundingClientRect();
@@ -2316,6 +2314,11 @@ function collectEditableScene(slideIndex) {
         const deckCss = [...document.querySelectorAll('style')].map(s => s.textContent).join('\n');
         const clone = element.cloneNode(true);
         if (target.kind === 'background') clone.querySelectorAll('*').forEach(n => { n.style.visibility = 'hidden'; });
+        // 克隆体强制钉在裁剪原点：绝对定位/偏移样式会让内容飞出裁剪画布，导出成全透明空图（元素消失根因）
+        for (const [prop, value] of [['position', 'absolute'], ['left', '0'], ['top', '0'], ['margin', '0'],
+                                     ['width', rect.width + 'px'], ['height', rect.height + 'px']]) {
+            clone.style.setProperty(prop, value, 'important');
+        }
         const wrap = document.createElement('div');
         wrap.setAttribute('xmlns', 'http://www.w3.org/1999/xhtml');
         const style = document.createElement('style');

@@ -32,6 +32,15 @@ const JS_SOURCES = ['player.js', 'stepfx.js', 'auto.js', 'countup.js', 'ambient.
     .map(f => readFileSync(join(ROOT, 'assets/effects', f), 'utf8').trimEnd());
 const FX_CSS = readFileSync(join(ROOT, 'assets/effects/effects.css'), 'utf8').trimEnd();
 
+const COLLECTOR_BEGIN = '/* ═══ COLLECTOR:BEGIN — 自 scripts/html2pptx/editable-scene.mjs 同步，勿手改（改收集器→两处源→sync） ═══ */';
+const COLLECTOR_END = '/* ═══ COLLECTOR:END ═══ */';
+const collectorSource = () => {
+    const src = readFileSync(join(ROOT, 'scripts/html2pptx/editable-scene.mjs'), 'utf8');
+    const start = src.indexOf('export function collectEditableScene');
+    const end = src.indexOf('// 临时遮去背景对象上的文字与子元素');
+    return src.slice(start, end).trimEnd().replace('export function collectEditableScene', 'function collectEditableScene');
+};
+const collectorBlock = () => COLLECTOR_BEGIN + '\n' + collectorSource() + '\n' + COLLECTOR_END;
 const ENGINE_BEGIN = '/* ═══ DECK ENGINE:BEGIN';
 const ENGINE_END = '/* ═══ DECK ENGINE:END ═══ */';
 const CSS_BEGIN = '/* ═══ DECK FX CSS:BEGIN';
@@ -88,6 +97,18 @@ for (const file of files) {
         const outside = out.slice(0, eng[0]) + out.slice(eng[1]);
         if (outside.includes('class DeckPlayer')) {
             failures.push(`${file}: 引擎块之外存在 class DeckPlayer 拷贝（漂移！删掉块内手改/块外残留）`);
+        }
+    }
+
+    // —— 收集器块（仅 exporter.js）：与 editable-scene.mjs 保持同步 ——
+    const colB = COLLECTOR_BEGIN, colE = COLLECTOR_END;
+    const colS = out.indexOf(colB), colEIdx = out.indexOf(colE);
+    if (colS >= 0 && colEIdx > colS) {
+        const want = collectorBlock();
+        const endPos = colEIdx + colE.length;
+        if (out.slice(colS, endPos).trim() !== want.trim()) {
+            if (CHECK) failures.push(`${file}: 收集器块 ≠ editable-scene.mjs 源（需要 node deck-studio/scripts/sync-engine.mjs）`);
+            else { out = out.slice(0, colS) + want + out.slice(endPos); changed = true; }
         }
     }
 

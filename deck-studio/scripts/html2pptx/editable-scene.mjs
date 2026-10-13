@@ -313,7 +313,7 @@ export function collectEditableScene(slideIndex) {
       const clipped = (['hidden', 'clip'].includes(style.overflowX) && element.scrollWidth > element.clientWidth + 2) || (['hidden', 'clip'].includes(style.overflowY) && element.scrollHeight > element.clientHeight + 2);
       const pseudo = pseudos.some(p => p.content !== '""');
       if (element.tagName === 'svg') { visitSvg(element); return; }   // SVG 图表分解为原生可编辑对象
-      if (['CANVAS', 'IMG', 'VIDEO', 'IFRAME', 'OBJECT'].includes(element.tagName) || transformed || clipped || pseudo || Number(style.opacity) < 1 || style.filter !== 'none' || style.clipPath !== 'none' || style.maskImage !== 'none' || style.mixBlendMode !== 'normal' || style.textShadow !== 'none' || px(style.webkitTextStrokeWidth) > 0) {
+      if (['CANVAS', 'IMG', 'VIDEO', 'IFRAME', 'OBJECT'].includes(element.tagName) || transformed || clipped || pseudo || Number(style.opacity) < 1 || style.filter !== 'none' || style.clipPath !== 'none' || style.maskImage !== 'none' || style.mixBlendMode !== 'normal' || px(style.webkitTextStrokeWidth) > 0) {   // text-shadow 不再触发转图片：阴影丢弃，文字保持可编辑
         raster(element, 'subtree', '复杂图形或特殊效果已保留为图片'); return;
       }
     }
