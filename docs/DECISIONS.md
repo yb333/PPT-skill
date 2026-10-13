@@ -88,4 +88,5 @@ vendor 导出工具 html2pptx 自根 scripts/ 收编进 skill（导出是承诺�
 ## 待定项
 
 - git 远端备份是否配置。
-- editable 导出模式：维持延后，image 导出真实用过一次后再议。
+- editable 导出模式：维持延后。image 导出已在 tech-review deck 实战验证（2026-09-24：14/14 页平价、
+  16:9 满屏图、导出终态=去 chrome/去动画层/方角满幅），管线已适配 deck-studio 契约。

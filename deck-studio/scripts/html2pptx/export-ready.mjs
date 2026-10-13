@@ -1,6 +1,6 @@
 /** 图片与可编辑导出共用同一就绪条件；补丁失败时禁止导出回滚后的旧内容。 */
 export async function prepareExportPage(page, { patchTimeoutMs = 90_000 } = {}) {
-  await page.waitForSelector('.stage .slide-canvas', { timeout:30_000 });
+  await page.waitForSelector('section.slide', { timeout:30_000 });   // deck-studio 契约
   let timedOut = false;
   try {
     await page.waitForFunction(() => (
@@ -29,14 +29,28 @@ export async function prepareExportPage(page, { patchTimeoutMs = 90_000 } = {}) 
   }
   await page.evaluate(async () => { await document.fonts.ready; });
   await page.addStyleTag({ content:`
+    /* deck-studio 舞台静态化：取消缩放、页全显纵向堆叠（每页 1920×1080 原位截图） */
+    html,body{overflow:visible!important;height:auto!important}
+    .deck-stage{position:static!important;overflow:visible!important;height:auto!important}
+    .deck-fit{transform:none!important;width:1920px!important;height:auto!important;box-shadow:none!important;margin:0 auto!important}
+    section.slide{position:relative!important;inset:auto!important;visibility:visible!important;opacity:1!important;display:flex!important;border-radius:0!important;box-shadow:none!important}
+    /* 播放器杂物隐藏 */
+    .deck-bar,.deck-menu,.deck-sidebar,.deck-progress,.nav-dots,.pres-cursor,.pres-cursor-hint,.player-hint,.keyboard-hint{display:none!important}
+    /* 快照 = 最终态：动画元素不属于内容，整层隐藏 */
+    .fx-layer,.ambient-layer{display:none!important}
+    /* reveal 终态 + 动画暂停 */
+    .reveal,.reveal-scale,.reveal-left,.reveal-blur{opacity:1!important;transform:none!important;filter:none!important;transition:none!important}
+    .slide .reveal:not(.shown){opacity:1!important}
+    *{animation-play-state:paused!important}
+    /* 旧 AICO 契约兼容（对 deck-studio 为 no-op） */
     .glassbar.railtoggle,.glassbar.navbar,.glassbar.modebar,.railpanel,.railfoot,.hint,.noteschip,#__deck_loading_overlay,#__bundler_loading{display:none!important}
     img[alt="HUAWEI"],img[data-brand-logo]{right:30px!important}
-    .slide-canvas *{animation-play-state:paused!important;transition:none!important;caret-color:transparent!important}
-    /* 普通渐显展示终态；不用 !important，保留补丁写入的内联透明度与变换。 */
+    .slide-canvas *{animation-play-state:paused!important;caret-color:transparent!important}
     .slide-canvas .build{opacity:1;transform:none;filter:none}
   ` });
   await page.evaluate(() => {
+    document.querySelectorAll('section.slide .reveal').forEach(el => el.classList.add('shown'));
     document.querySelectorAll('.slide-canvas .build').forEach(el => el.classList.add('in', 'show', 'visible'));
-    document.querySelectorAll('.slide-canvas svg').forEach(svg => svg.pauseAnimations?.());
+    document.querySelectorAll('svg').forEach(svg => svg.pauseAnimations?.());
   });
 }

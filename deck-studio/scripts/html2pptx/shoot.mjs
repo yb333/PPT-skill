@@ -34,7 +34,7 @@ try {
 
   // 探测每页的标签组：{ idx, groups: { groupName: [keys...] } }
   const slideTabs = await page.evaluate(() => {
-    const slides = [...document.querySelectorAll('.stage .slide-canvas')];
+    const slides = [...document.querySelectorAll('section.slide')];
     return slides.map((sl, idx) => {
       const groups = {};
       sl.querySelectorAll('[data-layer-btn]').forEach(b => {
@@ -51,13 +51,13 @@ try {
     });
   });
 
-  const slideHandles = await page.$$('.stage .slide-canvas');
+  const slideHandles = await page.$$('section.slide');
   console.error(`共 ${slideHandles.length} 页，开始截图 (scale=${scale}, q=${quality})…`);
 
   // 激活某页某组的某个标签：同步 btn + panel 的 data-active
   async function setActive(idx, group, key) {
     await page.evaluate(({ idx, group, key }) => {
-      const sl = document.querySelectorAll('.stage .slide-canvas')[idx];
+      const sl = document.querySelectorAll('section.slide')[idx];
       sl.querySelectorAll(`[data-layer-btn][data-layer-group="${group}"]`).forEach(b =>
         b.toggleAttribute('data-active', b.getAttribute('data-layer-btn') === key));
       sl.querySelectorAll(`[data-layer-panel][data-layer-group="${group}"]`).forEach(pn =>
