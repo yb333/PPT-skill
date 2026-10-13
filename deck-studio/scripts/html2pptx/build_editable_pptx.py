@@ -187,10 +187,33 @@ class Drawing:
             if geometry == "roundRect":
                 smallest = min(element["width"], element["height"])
                 adjustment = f'<a:gd name="adj" fmla="val {round(min(radius / smallest, 0.5) * 100000)}"/>'
-        properties = self.transform(box) + f'<a:prstGeom prst="{geometry}"><a:avLst>{adjustment}</a:avLst></a:prstGeom>'
-        properties += solid_fill(element.get("fill"), element.get("opacity", 1)) + self.line(element.get("border"))
+        # SVG 直线可能反向（终点在起点左侧/上方）：以 flip 属性表达，避免负尺寸。
+        flips = (' flipH="1"' if element.get("flipH") else '') + (' flipV="1"' if element.get("flipV") else '')
+        properties = (f'<a:xfrm{flips}><a:off x="{box[0]}" y="{box[1]}"/><a:ext cx="{box[2]}" cy="{box[3]}"/></a:xfrm>') if geometry == "line" else self.transform(box)
+        properties += f'<a:prstGeom prst="{geometry}"><a:avLst>{adjustment}</a:avLst></a:prstGeom>'
         if geometry == "line":
+            stroke_record = element.get("stroke") or {}
+            stroke = color(stroke_record.get("color", "#000000") if isinstance(stroke_record, dict) else stroke_record)
+            width = self.y(number(stroke_record.get("width", 1.5) if isinstance(stroke_record, dict) else 1.5, "线宽", 0))
+            dash = '<a:prstDash val="dash"/>' if element.get("dash") else '<a:prstDash val="solid"/>'
+            arrow = '<a:tailEnd type="triangle" w="med" len="med"/>' if element.get("arrow") else ''
+            properties += f"<a:ln w=\"{width}\">{solid_fill(stroke, 1)}{dash}{arrow}</a:ln>"
             return f'<p:cxnSp><p:nvCxnSpPr><p:cNvPr id="{identifier}" name="直线 {identifier}"/><p:cNvCxnSpPr/><p:nvPr/></p:nvCxnSpPr><p:spPr>{properties}</p:spPr></p:cxnSp>'
+        gradient = element.get("gradient")
+        if gradient:
+            properties += (f'<a:gradFill><a:gsLst><a:gs pos="0"><a:srgbClr val="{gradient.get("from", "FFFFFF")}"/></a:gs>'
+                           f'<a:gs pos="100000"><a:srgbClr val="{gradient.get("to", gradient.get("from", "FFFFFF"))}"/></a:gs></a:gsLst>'
+                           '<a:lin ang="5400000" scaled="1"/></a:gradFill>')
+        else:
+            properties += solid_fill(element.get("fill"), element.get("opacity", 1))
+        border = element.get("border")
+        if border:
+            dash = '<a:prstDash val="dash"/>' if border.get("dash") else '<a:prstDash val="solid"/>'
+            width = self.y(number(border.get("width", 1), "边框宽度", 0))
+            fill = solid_fill(color(border.get("color")), border.get("opacity", 1))
+            properties += f'<a:ln w="{width}">{fill}{dash}</a:ln>'
+        else:
+            properties += self.line()
         return f'<p:sp><p:nvSpPr><p:cNvPr id="{identifier}" name="形状 {identifier}"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr>{properties}</p:spPr></p:sp>'
 
     def table(self, element, identifier):

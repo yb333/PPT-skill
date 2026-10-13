@@ -182,6 +182,90 @@ export function collectEditableScene(slideIndex) {
     }
     emit(result, table); return true;
   }
+  function svgPaint(value, defs) {
+    if (!value || value === 'none') return null;
+    if (value.startsWith('url(')) {
+      const id = value.replace(/url\(#([^)]+)\)/, '$1');
+      return defs.get(id) || null;                       // { from, to } 渐变
+    }
+    let hex = value.trim();
+    if (hex.startsWith('#')) {
+      if (hex.length === 4) hex = '#' + [...hex.slice(1)].map(c => c + c).join('');
+      return { hex: hex.slice(1).toUpperCase(), alpha: 1 };
+    }
+    const rgb = color(value);
+    return rgb.alpha ? rgb : null;
+  }
+  /* SVG 图表分解：rect/line/text → 原生形状/连接线/文本框（可编辑）；path 弧线走抠图。
+     坐标：viewBox 用户单位 × 缩放映射到画布，再复用 box() 换算场景坐标。 */
+  function visitSvg(svg) {
+    if (svg.classList.contains('fx-layer') || svg.classList.contains('ambient-layer')) return;   // 动画层不进快照
+    const rect0 = svg.getBoundingClientRect();
+    if (!visibleRect(rect0)) return;
+    const vb = svg.viewBox.baseVal;
+    if (!vb.width || !vb.height) return;
+    const ux = rect0.width / vb.width, uy = rect0.height / vb.height;
+    const defs = new Map();
+    for (const g of svg.querySelectorAll('linearGradient')) {
+      const stops = [...g.querySelectorAll('stop')].map(stop => svgPaint(stop.getAttribute('stop-color'), defs));
+      const solid = stops.filter(Boolean);
+      defs.set(g.id, solid.length >= 2 ? { from: solid[0].hex, to: solid[solid.length - 1].hex } : null);
+    }
+    const canvasRect = vr => {
+      const left = (vr.left - bounds.left) * sx, top = (vr.top - bounds.top) * sy;
+      return { x: left, y: top, width: vr.width * sx, height: vr.height * sy };
+    };
+    const vrOf = (x, y, w, h) => ({ left: rect0.left + x * ux, top: rect0.top + y * uy, width: w * ux, height: h * uy });
+    for (const node of svg.querySelectorAll('rect, line, text, path')) {
+      const style = getComputedStyle(node);
+      if (style.display === 'none' || style.visibility === 'hidden' || node.closest('defs')) continue;
+      const tag = node.tagName;
+      if (tag === 'rect') {
+        const x = px(node.getAttribute('x')), y = px(node.getAttribute('y'));
+        const w = px(node.getAttribute('width')), h = px(node.getAttribute('height'));
+        if (w <= 0 || h <= 0) continue;
+        const rx = px(node.getAttribute('rx'));
+        const fill = svgPaint(node.getAttribute('fill'), defs);
+        const stroke = svgPaint(node.getAttribute('stroke'), defs);
+        const sw = px(node.getAttribute('stroke-width')) || 1;
+        const shape = { type: 'shape', ...canvasRect(vrOf(x, y, w, h)), geometry: rx > 0 ? 'roundRect' : 'rect', radius: rx * ux };
+        if (fill && fill.from) shape.gradient = fill;
+        else if (fill) { shape.fill = fill.hex; shape.opacity = fill.alpha; }
+        if (stroke && sw > 0) shape.border = { color: stroke.hex, opacity: stroke.alpha, width: sw * ux, dash: !!node.getAttribute('stroke-dasharray') };
+        emit(shape, node, true);
+      } else if (tag === 'line') {
+        const x1 = px(node.getAttribute('x1')), y1 = px(node.getAttribute('y1'));
+        const x2 = px(node.getAttribute('x2')), y2 = px(node.getAttribute('y2'));
+        const width = Math.abs(x2 - x1), height = Math.abs(y2 - y1);
+        if (width < 0.01 && height < 0.01) continue;
+        const stroke = svgPaint(node.getAttribute('stroke'), defs);
+        if (!stroke) continue;
+        const shape = { type: 'shape', ...canvasRect(vrOf(Math.min(x1, x2), Math.min(y1, y2), width, height)),
+          geometry: 'line', stroke: { color: stroke.hex, width: (px(node.getAttribute('stroke-width')) || 1.5) * ux },
+          arrow: node.hasAttribute('marker-end'), dash: !!node.getAttribute('stroke-dasharray'),
+          flipH: x2 < x1, flipV: y2 < y1 };
+        emit(shape, node, true);
+      } else if (tag === 'text') {
+        const content = node.textContent.trim();
+        if (!content) continue;
+        const x = px(node.getAttribute('x')), y = px(node.getAttribute('y'));
+        const fontSize = (px(node.getAttribute('font-size')) || parseFloat(getComputedStyle(node).fontSize) || 10) * uy;
+        const weight = Number(node.getAttribute('font-weight') || getComputedStyle(node).fontWeight || 400);
+        const fill = svgPaint(node.getAttribute('fill') || getComputedStyle(node).fill, defs);
+        const w = (textMetrics.font = `${getComputedStyle(node).fontWeight} ${getComputedStyle(node).fontSize} ${getComputedStyle(node).fontFamily}`, textMetrics.measureText(content).width) * ux;
+        const anchor = node.getAttribute('text-anchor') || 'start';
+        const xvp = rect0.left + x * ux, yvp = rect0.top + y * uy;
+        const left = anchor === 'middle' ? xvp - w / 2 : anchor === 'end' ? xvp - w : xvp;
+        const height = fontSize * 1.35;
+        const text = { type: 'text', ...canvasRect({ left, top: yvp - fontSize * 0.85, width: w, height }), width: w + 2, wrap: false,
+          paragraphs: [{ align: anchor === 'middle' ? 'center' : anchor === 'end' ? 'right' : 'left',
+            runs: [{ text: content, fontFamily: 'Microsoft YaHei', fontSize, color: fill ? fill.hex : '000000', opacity: fill ? fill.alpha : 1, bold: weight >= 600 }] }] };
+        emit(text, node);
+      } else if (tag === 'path') {
+        raster(node, 'subtree', 'SVG 弧线已保留为图片');        // v1：弧线光栅化（透明底）
+      }
+    }
+  }
   function visit(element) {
     const style = getComputedStyle(element), rect = element.getBoundingClientRect();
     if (['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEMPLATE'].includes(element.tagName) || style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) === 0) return;
@@ -191,7 +275,8 @@ export function collectEditableScene(slideIndex) {
       const transformed = uniformScale(style) === null || (matrix && (Math.abs(matrix.a - 1) > 0.001 || Math.abs(matrix.d - 1) > 0.001 || Math.abs(matrix.b) > 0.001 || Math.abs(matrix.c) > 0.001 || !matrix.is2D));
       const clipped = (['hidden', 'clip'].includes(style.overflowX) && element.scrollWidth > element.clientWidth + 2) || (['hidden', 'clip'].includes(style.overflowY) && element.scrollHeight > element.clientHeight + 2);
       const pseudo = pseudos.some(p => p.content !== '""');
-      if (['svg', 'CANVAS', 'IMG', 'VIDEO', 'IFRAME', 'OBJECT'].includes(element.tagName) || transformed || clipped || pseudo || Number(style.opacity) < 1 || style.filter !== 'none' || style.clipPath !== 'none' || style.maskImage !== 'none' || style.mixBlendMode !== 'normal' || style.textShadow !== 'none' || px(style.webkitTextStrokeWidth) > 0) {
+      if (element.tagName === 'svg') { visitSvg(element); return; }   // SVG 图表分解为原生可编辑对象
+      if (['CANVAS', 'IMG', 'VIDEO', 'IFRAME', 'OBJECT'].includes(element.tagName) || transformed || clipped || pseudo || Number(style.opacity) < 1 || style.filter !== 'none' || style.clipPath !== 'none' || style.maskImage !== 'none' || style.mixBlendMode !== 'normal' || style.textShadow !== 'none' || px(style.webkitTextStrokeWidth) > 0) {
         raster(element, 'subtree', '复杂图形或特殊效果已保留为图片'); return;
       }
     }

@@ -88,7 +88,9 @@ vendor 导出工具 html2pptx 自根 scripts/ 收编进 skill（导出是承诺�
 ## 待定项
 
 - git 远端备份是否配置。
-- editable 导出模式：已适配 deck-studio 契约并在 tech-review deck 实战验证（2026-10-13：14 页、
-  59 个可编辑文本框——标题题眼分框定位正确、SVG 诊断图以位图嵌入）。image 导出此前已实战验证
+- editable 导出模式：已适配 deck-studio 契约并在 tech-review deck 实战验证，且已升级 **SVG 图表
+  分解为原生可编辑对象**（2026-10-13）：rect/line/text → 形状/连接线（含箭头/虚线/翻转）/文本框，
+  渐变填充随对象保留；仅 path 弧线 v1 光栅化。全 deck 779 个原生对象（此前为 14 张整页图），
+  图表内每个框/每条线/每段字均可在 PPT 中直接调整。image 导出此前已实战验证
   （14/14 平价、16:9 满屏图、终态=去 chrome/去动画层/方角满幅）。分工：放映/分享用 image（按钮
   一键，秒级）；需要改字的场景用 editable（--mode editable，分钟级，SVG 图内文字不可编辑）。
