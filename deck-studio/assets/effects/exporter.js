@@ -396,11 +396,25 @@ function collectEditableScene(slideIndex) {
       return { x: left, y: top, width: vr.width * sx, height: vr.height * sy };
     };
     const vrOf = (x, y, w, h) => ({ left: rect0.left + x * ux, top: rect0.top + y * uy, width: w * ux, height: h * uy });
-    for (const node of svg.querySelectorAll('rect, line, text, path')) {
+    for (const node of svg.querySelectorAll('rect, circle, ellipse, line, text, path')) {
       const style = getComputedStyle(node);
       if (style.display === 'none' || style.visibility === 'hidden' || node.closest('defs')) continue;
       const tag = node.tagName;
-      if (tag === 'rect') {
+      if (tag === 'circle' || tag === 'ellipse') {
+        const isCircle = tag === 'circle';
+        const cx = px(node.getAttribute('cx')), cy = px(node.getAttribute('cy'));
+        const rx = isCircle ? px(node.getAttribute('r')) : px(node.getAttribute('rx'));
+        const ry = isCircle ? px(node.getAttribute('r')) : px(node.getAttribute('ry'));
+        if (rx <= 0 || ry <= 0) continue;
+        const fill = svgPaint(node.getAttribute('fill'), defs);
+        const stroke = svgPaint(node.getAttribute('stroke'), defs);
+        const sw = px(node.getAttribute('stroke-width')) || 1;
+        const shape = { type: 'shape', ...canvasRect(vrOf(cx - rx, cy - ry, rx * 2, ry * 2)), geometry: 'ellipse' };
+        if (fill && fill.from) shape.gradient = fill;
+        else if (fill) { shape.fill = fill.hex; shape.opacity = fill.alpha; }
+        if (stroke && sw > 0) shape.border = { color: stroke.hex, opacity: stroke.alpha, width: sw * ux, dash: !!node.getAttribute('stroke-dasharray') };
+        emit(shape, node, true);
+      } else if (tag === 'rect') {
         const x = px(node.getAttribute('x')), y = px(node.getAttribute('y'));
         const w = px(node.getAttribute('width')), h = px(node.getAttribute('height'));
         if (w <= 0 || h <= 0) continue;
@@ -541,7 +555,6 @@ function collectEditableScene(slideIndex) {
   return { name: canvas.querySelector('section[data-label]')?.getAttribute('data-label') || `第 ${slideIndex + 1} 页`, elements, warnings: [...warnings] };
 }
 /* ═══ COLLECTOR:END ═══ */
-
 /* —— 页内元素抠图：foreignObject 透明底 PNG（图片类对象用） —— */
     async function elementPng(target) {
         const element = target.element;

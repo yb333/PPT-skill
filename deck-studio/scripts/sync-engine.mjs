@@ -102,13 +102,28 @@ for (const file of files) {
 
     // —— 收集器块（仅 exporter.js）：与 editable-scene.mjs 保持同步 ——
     const colB = COLLECTOR_BEGIN, colE = COLLECTOR_END;
-    const colS = out.indexOf(colB), colEIdx = out.indexOf(colE);
-    if (colS >= 0 && colEIdx > colS) {
-        const want = collectorBlock();
-        const endPos = colEIdx + colE.length;
-        if (out.slice(colS, endPos).trim() !== want.trim()) {
-            if (CHECK) failures.push(`${file}: 收集器块 ≠ editable-scene.mjs 源（需要 node deck-studio/scripts/sync-engine.mjs）`);
-            else { out = out.slice(0, colS) + want + out.slice(endPos); changed = true; }
+    const colS = out.indexOf(colB);
+    if (colS >= 0) {
+        // 边界 = END 标记（含）；历史多次同步可能累积重复 END——一并吞掉
+        let colEnd = out.indexOf(colE, colS);
+        if (colEnd >= 0) {
+            colEnd += colE.length;
+            for (;;) {
+                const rest = out.slice(colEnd);
+                const dup = rest.match(/^\s*\/\* ═══ COLLECTOR:END ═══ \*\//);
+                if (!dup) break;
+                colEnd += dup[0].length;
+            }
+        } else {
+            // 旧格式 deck 无 END 标记：退化为下一阶段注释（页内元素抠图）作为边界
+            colEnd = out.indexOf('/* —— 页内元素抠图', colS);
+        }
+        if (colEnd > colS) {
+            const want = collectorBlock();
+            if (out.slice(colS, colEnd).trim() !== want.trim()) {
+                if (CHECK) failures.push(`${file}: 收集器块 ≠ editable-scene.mjs 源（需要 node deck-studio/scripts/sync-engine.mjs）`);
+                else { out = out.slice(0, colS) + want + out.slice(colEnd); changed = true; }
+            }
         }
     }
 
