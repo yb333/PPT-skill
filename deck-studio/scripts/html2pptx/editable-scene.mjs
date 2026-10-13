@@ -1,6 +1,6 @@
 // 此函数在浏览器内执行；保持自包含，兼容 Chrome 与桌面 Host 渲染服务。
 export function collectEditableScene(slideIndex) {
-  const canvas = document.querySelectorAll('.stage .slide-canvas')[slideIndex];
+  const canvas = document.querySelectorAll('section.slide')[slideIndex];   // deck-studio 契约
   const bounds = canvas.getBoundingClientRect();
   const sx = 1920 / bounds.width, sy = 1080 / bounds.height;
   const fontScale = 1920 / canvas.offsetWidth;

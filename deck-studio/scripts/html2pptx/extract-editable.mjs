@@ -17,7 +17,7 @@ export async function extractEditable(input, output, { scale = 2, referenceDir }
     const page = await browser.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: scale });
     await page.goto(deckFileUrl(resolve(input)), { waitUntil: 'load', timeout: 180000 });
     await prepareExportPage(page);
-    const states = await page.evaluate(() => [...document.querySelectorAll('.stage .slide-canvas')].flatMap((canvas, index) => {
+    const states = await page.evaluate(() => [...document.querySelectorAll('section.slide')].flatMap((canvas, index) => {
       const groups = new Map();
       for (const button of canvas.querySelectorAll('[data-layer-btn]')) {
         const group = button.getAttribute('data-layer-group') || '';
@@ -31,11 +31,11 @@ export async function extractEditable(input, output, { scale = 2, referenceDir }
       for (const [group, keys] of groups) for (const key of keys.slice(1)) variants.push({ index, active: { ...defaults, [group]: key } });
       return variants;
     }));
-    const handles = await page.$$('.stage .slide-canvas');
+    const handles = await page.$$('section.slide');
     const manifest = { schema: 1, mode: 'editable', width: 1920, height: 1080, slides: [] };
     for (const state of states) {
       await page.evaluate(({ index, active }) => {
-        const canvas = document.querySelectorAll('.stage .slide-canvas')[index];
+        const canvas = document.querySelectorAll('section.slide')[index];
         for (const el of canvas.querySelectorAll('[data-layer-btn],[data-layer-panel]')) {
           const group = el.getAttribute('data-layer-group') || '';
           if (Object.hasOwn(active, group)) el.toggleAttribute('data-active', (el.getAttribute('data-layer-btn') ?? el.getAttribute('data-layer-panel')) === active[group]);
@@ -43,7 +43,7 @@ export async function extractEditable(input, output, { scale = 2, referenceDir }
       }, state);
       await handles[state.index].scrollIntoViewIfNeeded();
       await page.evaluate(async index => {
-        const canvas = document.querySelectorAll('.stage .slide-canvas')[index];
+        const canvas = document.querySelectorAll('section.slide')[index];
         await Promise.all([...canvas.querySelectorAll('img')].map(img => img.decode().catch(() => {})));
         await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
       }, state.index);
