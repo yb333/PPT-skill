@@ -1768,7 +1768,6 @@ Object.assign(DeckPlayer.prototype, {
    deck 内 ═══ DECK ENGINE ═══ 标记块的一部分（sync-engine 写入）。
    ⤓ PPT  → 可编辑 PPTX：页内提取文本/形状/连接线/自由曲线/表格为原生对象，
              图表每框每线每字可直接编辑（与 CLI --mode editable 同构）
-   ⤓ 图   → 快照 PPTX：每页 2× 高清 JPEG 满屏（放映/分享用，像素级保真）
    零服务器、零外部依赖（zip 为 store 模式手写实现）；file:// 离线可用。
    限制：webfont 导出回退系统字体（高保真批量走 convert.py 管线）。
    ===================================================================== */
@@ -1841,74 +1840,12 @@ window.DeckExport = (function () {
         return out;
     }
 
-    /* —— 快照模式：整页 foreignObject 光栅化 —— */
     const SNAPSHOT_CSS = `
         section.slide{visibility:visible!important;opacity:1!important;position:relative!important;inset:auto!important;
             margin:0!important;border-radius:0!important;box-shadow:none!important;width:1920px!important;height:1080px!important}
         .slide .reveal{opacity:1!important;transform:none!important;filter:none!important;transition:none!important}
         .fx-layer,.ambient-layer{display:none!important}
         *{animation:none!important;transition:none!important}`;
-    function slideImage(slide, deckCss) {
-        const clone = slide.cloneNode(true);
-        clone.querySelectorAll('.fx-layer,.ambient-layer').forEach(n => n.remove());
-        clone.querySelectorAll('.reveal').forEach(n => n.classList.add('shown'));
-        const wrap = document.createElement('div');
-        wrap.setAttribute('xmlns', 'http://www.w3.org/1999/xhtml');
-        const style = document.createElement('style');
-        style.textContent = deckCss + '\n' + SNAPSHOT_CSS;
-        wrap.appendChild(style);
-        wrap.appendChild(clone);
-        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-        svg.setAttribute('width', W); svg.setAttribute('height', H);
-        const fo = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
-        fo.setAttribute('width', '100%'); fo.setAttribute('height', '100%');
-        fo.appendChild(wrap);
-        svg.appendChild(fo);
-        return new Promise((res, rej) => {
-            const img = new Image();
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                canvas.width = W * SCALE; canvas.height = H * SCALE;
-                const ctx = canvas.getContext('2d');
-                ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                canvas.toBlob(b => b ? res(b) : rej(new Error('canvas.toBlob 失败')), 'image/jpeg', QUALITY);
-            };
-            img.onerror = () => rej(new Error('页渲染失败（foreignObject 光栅化）'));
-            img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(new XMLSerializer().serializeToString(svg));
-        });
-    }
-    async function exportSnapshot(deck) {
-        const deckCss = [...document.querySelectorAll('style')].map(s => s.textContent).join('\n');
-        const files = [];
-        for (let i = 0; i < deck.slides.length; i++) {
-            deck.flashHint('playerHint', `导出快照 ${i + 1}/${deck.slides.length}…`, 2000);
-            const blob = await slideImage(deck.slides[i], deckCss);
-            files.push({ name: `ppt/media/image${i + 1}.jpg`, data: new Uint8Array(await blob.arrayBuffer()) });
-        }
-        files.push({ name: '[Content_Types].xml', data: contentTypesImage(deck.slides.length) });
-        files.push({ name: '_rels/.rels', data: relationships([[1, 'officeDocument', 'ppt/presentation.xml']]) });
-        const slideIds = Array.from({ length: deck.slides.length }, (_, i) => `<p:sldId id="${255 + i + 1}" r:id="rId${i + 2}"/>`).join('');
-        files.push({ name: 'ppt/presentation.xml', data: xml(
-            `<p:presentation xmlns:p="${P}" xmlns:a="${A}" xmlns:r="${R}" autoCompressPictures="0">`
-            + '<p:sldMasterIdLst><p:sldMasterId id="2147483648" r:id="rId1"/></p:sldMasterIdLst>'
-            + `<p:sldIdLst>${slideIds}</p:sldIdLst><p:sldSz cx="${WIDTH}" cy="${HEIGHT}"/>`
-            + '<p:notesSz cx="6858000" cy="9144000"/></p:presentation>') });
-        files.push({ name: 'ppt/_rels/presentation.xml.rels', data: relationships(
-            [[1, 'slideMaster', 'slideMasters/slideMaster1.xml']]
-            .concat(Array.from({ length: deck.slides.length }, (_, i) => [i + 2, 'slide', `slides/slide${i + 1}.xml`]))) });
-        files.push({ name: 'ppt/slideMasters/slideMaster1.xml', data: TPL_MASTER });
-        files.push({ name: 'ppt/slideMasters/_rels/slideMaster1.xml.rels', data: relationships([[1, 'slideLayout', '../slideLayouts/slideLayout1.xml'], [2, 'theme', '../theme/theme1.xml']]) });
-        files.push({ name: 'ppt/slideLayouts/slideLayout1.xml', data: TPL_LAYOUT });
-        files.push({ name: 'ppt/slideLayouts/_rels/slideLayout1.xml.rels', data: relationships([[1, 'slideMaster', '../slideMasters/slideMaster1.xml']]) });
-        files.push({ name: 'ppt/theme/theme1.xml', data: TPL_THEME });
-        for (let i = 0; i < deck.slides.length; i++) {
-            files.push({ name: `ppt/slides/slide${i + 1}.xml`, data: slideXml(`image${i + 1}.jpg`) });
-            files.push({ name: `ppt/slides/_rels/slide${i + 1}.xml.rels`, data: relationships([[1, 'slideLayout', '../slideLayouts/slideLayout1.xml'], [2, 'image', `../media/image${i + 1}.jpg`]]) });
-        }
-        downloadPptx(zipStore(files), deck, 'PPTX 快照已下载 ✓');
-    }
     const pictureXml = picture;
     const slideXml = name => xml(
         `<p:sld xmlns:p="${P}" xmlns:a="${A}" xmlns:r="${R}"><p:cSld><p:spTree>`
@@ -2549,9 +2486,8 @@ function collectEditableScene(slideIndex) {
             });
         };
         guard(document.getElementById('pptxBtn'), exportEditable);
-        guard(document.getElementById('snapBtn'), exportSnapshot);
     }
-    return { exportEditable, exportSnapshot, bind };
+    return { exportEditable, bind };
 })();
 (function () {
     const boot = () => { if (window.__deck && window.DeckExport) window.DeckExport.bind(window.__deck); };
