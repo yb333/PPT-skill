@@ -38,6 +38,13 @@ const collectorSource = () => {
 };
 const collectorBlock = () => COLLECTOR_BEGIN + '\n' + collectorSource() + '\n' + COLLECTOR_END;
 
+// —— 作者配置：config.json 的 author 注入 exporter 与各 deck 封面作者行（缺省 院博）——
+const AUTHOR = (() => {
+    try { return JSON.parse(readFileSync(join(ROOT, 'config.json'), 'utf8')).author || '院博'; }
+    catch { return '院博'; }
+})();
+const authorRe = /const AUTHOR = '[^']*';/;
+
 // —— 预同步：exporter.js 内嵌收集器先刷新为 editable-scene.mjs 最新版（源单点），再打包引擎块 ——
 {
     const exporterPath = join(ROOT, 'assets/effects/exporter.js');
@@ -47,6 +54,11 @@ const collectorBlock = () => COLLECTOR_BEGIN + '\n' + collectorSource() + '\n' +
     if (c0 >= 0 && e0 > c0) {
         const updated = exp.slice(0, c0) + collectorBlock() + exp.slice(e0 + COLLECTOR_END.length);
         if (updated !== exp) { writeFileSync(exporterPath, updated); console.log('  synced exporter.js collector'); }
+    }
+    const authorRe = /const AUTHOR = '[^']*';/;
+    if (authorRe.test(exp)) {
+        const updated2 = exp.replace(authorRe, `const AUTHOR = '${AUTHOR}';`);
+        if (updated2 !== exp) { writeFileSync(exporterPath, updated2); console.log('  synced exporter.js author'); }
     }
 }
 
@@ -137,6 +149,13 @@ for (const file of files) {
                 else { out = out.slice(0, colS) + want + out.slice(colEnd); changed = true; }
             }
         }
+    }
+
+    // —— 封面作者行：按 config 统一署名（只动「作者：」开头的填写行，其余内容不碰）——
+    const coverAuthorRe = /(<div class="[^"]*\bcover-date[^"]*"[^>]*>)作者：[^<]*(<\/div>)/;
+    if (coverAuthorRe.test(out)) {
+        const updated3 = out.replace(coverAuthorRe, `$1作者：${AUTHOR}$2`);
+        if (updated3 !== out) { out = updated3; changed = true; }
     }
 
     // —— FX CSS 块：有标记才管 ——

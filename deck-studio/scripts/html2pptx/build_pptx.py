@@ -22,7 +22,16 @@ P = "http://schemas.openxmlformats.org/presentationml/2006/main"
 A = "http://schemas.openxmlformats.org/drawingml/2006/main"
 R = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
 WIDTH, HEIGHT = 12192000, 6858000  # EMU，精确 16:9
-AUTHOR = "院博"                     # 本引擎产出的所有 PPTX 文件作者（元数据）
+def _load_author():
+    """作者读 deck-studio/config.json（换电脑改配置即可）；缺省 院博。"""
+    try:
+        import json
+        return json.loads((HERE.parents[1] / "config.json").read_text(encoding="utf-8")).get("author", "院博")
+    except Exception:
+        return "院博"
+
+
+AUTHOR = _load_author()             # 本引擎产出的所有 PPTX 文件作者（元数据 + 封面署名口径）
 
 
 def xml(body):
