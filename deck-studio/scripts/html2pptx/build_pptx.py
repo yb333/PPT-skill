@@ -22,6 +22,7 @@ P = "http://schemas.openxmlformats.org/presentationml/2006/main"
 A = "http://schemas.openxmlformats.org/drawingml/2006/main"
 R = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
 WIDTH, HEIGHT = 12192000, 6858000  # EMU，精确 16:9
+AUTHOR = "院博"                     # 本引擎产出的所有 PPTX 文件作者（元数据）
 
 
 def xml(body):
@@ -74,6 +75,7 @@ def content_types(slide_count, has_attachment):
         ("xml", "application/xml"), ("jpg", "image/jpeg"), ("png", "image/png"),
     ]
     overrides = [
+        ("docProps/core.xml", "package.core-properties+xml"),
         ("ppt/presentation.xml", "presentationml.presentation.main+xml"),
         ("ppt/slideMasters/slideMaster1.xml", "presentationml.slideMaster+xml"),
         ("ppt/slideLayouts/slideLayout1.xml", "presentationml.slideLayout+xml"),
@@ -90,11 +92,26 @@ def content_types(slide_count, has_attachment):
     )
 
 
+def core_xml():
+    return xml(
+        '<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" '
+        'xmlns:dc="http://purl.org/dc/elements/1.1/">'
+        f'<dc:creator>{AUTHOR}</dc:creator><cp:lastModifiedBy>{AUTHOR}</cp:lastModifiedBy>'
+        '</cp:coreProperties>')
+
+
 def base_parts(slide_count, has_attachment):
     slides = ''.join(f'<p:sldId id="{255 + index}" r:id="rId{index + 1}"/>' for index in range(1, slide_count + 1))
     parts = {
         "[Content_Types].xml": content_types(slide_count, has_attachment),
-        "_rels/.rels": relationships([(1, "officeDocument", "ppt/presentation.xml")]),
+        "docProps/core.xml": core_xml(),
+        # 注意：core-properties 的关系类型命名空间是 package/2006/relationships，
+        # 与 officeDocument 前缀不同，不能用 relationships() 辅助函数。
+        "_rels/.rels": xml(
+            '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+            '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/>'
+            '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>'
+            '</Relationships>'),
         "ppt/presentation.xml": xml(
             f'<p:presentation xmlns:p="{P}" xmlns:a="{A}" xmlns:r="{R}" autoCompressPictures="0">'
             '<p:sldMasterIdLst><p:sldMasterId id="2147483648" r:id="rId1"/></p:sldMasterIdLst>'

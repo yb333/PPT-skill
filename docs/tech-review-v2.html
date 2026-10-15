@@ -2134,9 +2134,16 @@ window.DeckExport = (function () {
         + `<p:spPr><a:xfrm><a:off x="${left}" y="${top}"/><a:ext cx="${width}" cy="${height}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr></p:pic>`;
     const solidFill = (hex, opacity = 1) => hex
         ? `<a:solidFill><a:srgbClr val="${hex}">${opacity < 1 ? `<a:alpha val="${Math.round(opacity * 100000)}"/>` : ''}</a:srgbClr></a:solidFill>` : '<a:noFill/>';
+    const AUTHOR = '院博';                                          // 本引擎产出的所有 PPTX 文件作者
+    const coreXml = () => xml(
+        '<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" '
+        + 'xmlns:dc="http://purl.org/dc/elements/1.1/">'
+        + `<dc:creator>${AUTHOR}</dc:creator><cp:lastModifiedBy>${AUTHOR}</cp:lastModifiedBy>`
+        + '</cp:coreProperties>');
     const contentTypesImage = n => xml('<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
         + '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
         + '<Default Extension="xml" ContentType="application/xml"/><Default Extension="jpg" ContentType="image/jpeg"/><Default Extension="png" ContentType="image/png"/>'
+        + '<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>'
         + '<Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>'
         + '<Override PartName="/ppt/slideMasters/slideMaster1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml"/>'
         + '<Override PartName="/ppt/slideLayouts/slideLayout1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml"/>'
@@ -2797,7 +2804,12 @@ function collectEditableScene(slideIndex) {
             slideRels.push(rels);
         }
         files.push({ name: '[Content_Types].xml', data: contentTypesImage(deck.slides.length) });
-        files.push({ name: '_rels/.rels', data: relationships([[1, 'officeDocument', 'ppt/presentation.xml']]) });
+        files.push({ name: 'docProps/core.xml', data: coreXml() });
+        files.push({ name: '_rels/.rels', data: xml(
+            '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+            + '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/>'
+            + '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>'
+            + '</Relationships>') });
         const slideIds = Array.from({ length: deck.slides.length }, (_, i) => `<p:sldId id="${255 + i + 1}" r:id="rId${i + 2}"/>`).join('');
         files.push({ name: 'ppt/presentation.xml', data: xml(
             `<p:presentation xmlns:p="${P}" xmlns:a="${A}" xmlns:r="${R}" autoCompressPictures="0">`
