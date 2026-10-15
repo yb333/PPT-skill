@@ -10,6 +10,8 @@
              ['flows', [[x1,y1,x2,y2, color?],...], dur?, color?]  多条流线同时流转（扇出/并行；每线颜色可单独覆盖）
              ['pulse', [x,y,w,h]]              到站脉冲：区域中心蓝色涟漪，~750ms 即逝，不染色
              ['pulses', [[x,y,w,h],...]]       多区域同时脉冲（同步到站语义）
+             ['enter', 'selector', staggerMs?] DOM 入场：页内匹配元素依次淡入上移（stagger 缺省 90ms；
+                                               唯一不依赖 SVG 的微指令；结束即清内联样式，页面恢复原样）
              ['lit', [x,y,w,h]]                （遗留·染色）区域点亮——不染色法则下禁用
              ['wseq', [rect,...]]              （遗留·染色）多区域连播——同上
    序列收尾：fx 层清空，页面 100% 恢复原样（终态不变式）；
@@ -61,6 +63,32 @@
                 raf = requestAnimationFrame(tick);
             });
         }
+        /* DOM 入场：匹配元素整体先藏，再逐个淡入上移；快进/跳页一律还原内联样式（终态不变式） */
+        function enter(sel, stagger) {
+            return new Promise(res => {
+                const els = [...deck.slides[deck.current].querySelectorAll(sel)];
+                if (!els.length) return res();
+                const gap = stagger || 90, dur = 420, rise = 16;
+                els.forEach(el => { el.style.opacity = '0'; el.style.transform = `translateY(${rise}px)`; });
+                const total = els.length * gap + dur, t0 = performance.now();
+                const tick = now => {
+                    if (skip || deck.current !== pageIdx) {
+                        els.forEach(el => { el.style.opacity = ''; el.style.transform = ''; });
+                        return res();
+                    }
+                    const t = now - t0;
+                    els.forEach((el, i) => {
+                        const k = Math.min(1, Math.max(0, (t - i * gap) / dur));
+                        const e = 1 - Math.pow(1 - k, 3);
+                        el.style.opacity = String(e);
+                        el.style.transform = `translateY(${rise * (1 - e)}px)`;
+                    });
+                    if (t < total) raf = requestAnimationFrame(tick);
+                    else { els.forEach(el => { el.style.opacity = ''; el.style.transform = ''; }); res(); }
+                };
+                raf = requestAnimationFrame(tick);
+            });
+        }
         function move(x1, y1, x2, y2, dur, color) {              // （遗留·光点）不染色法则下新 deck 勿用
             return new Promise(res => {
                 if (!deck.slides[deck.current].querySelector('svg')) return res();
@@ -92,6 +120,7 @@
                 else if (m[0] === 'move') await move(m[1], m[2], m[3], m[4], m[5] || 500, m[6]);
                 else if (m[0] === 'pulse') { pulse(m[1]); await deck.wait(skip ? 60 : 420); }
                 else if (m[0] === 'pulses') { for (const r of m[1]) pulse(r); await deck.wait(skip ? 60 : 750); }
+                else if (m[0] === 'enter') await enter(m[1], m[2]);
             }
             if (stale()) { deck.autoBusy = false; return; }      // 已换页：fx 归新页面序列所有
             deck.autoBusy = false;

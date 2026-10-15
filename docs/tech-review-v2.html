@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <!-- tech-review deck v2：基于 deck-studio 新框架重建（原文件 tech-review_deck-studio.html 保留不动）。
      本批：全 12 页补齐——封面/背景（既有）+ 形态→进展九个内容页（新版头 + 源图原样）+ 云山品牌结束页。
-     动画：定稿后按「光点语言」构建——飞行+到站脉冲+常驻流转+数字滚动，演完页面恢复原样。 -->
+     动画：定稿后按「光点语言」构建——飞行+到站脉冲+常驻流转+数字滚动，演完页面恢复原样。
+     结构：按章规划重组——第 2 页目录（章级 4 条，data-toc 可点跳页），eyebrow 改 章.节 编号（1.1…4.4）。 -->
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -41,6 +42,27 @@ body.browse .slide { position: relative; margin-bottom: 24px; border-radius: 8px
 .slide-content { flex: 1; display: flex; flex-direction: column; min-height: 0; gap: 14px; }
 .page-head { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
 .page-num { font-family: ui-monospace, "JetBrains Mono", monospace; font-size: 18px; letter-spacing: .2em; color: var(--c-exec); font-weight: 600; }
+
+/* ===== 目录页（页型契约见 assets/templates/yunshan.html；data-toc 跳页由引擎内置） ===== */
+.toc-side { position: absolute; left: 90px; top: 0; bottom: 0; width: 300px;
+  display: flex; flex-direction: column; justify-content: center; gap: 20px;
+  border-right: 1px solid var(--ys-line, #d5d9de); }
+.toc-word { font-size: 88px; font-weight: 700; color: var(--tpl-navy, #16294a); letter-spacing: .12em; }
+.toc-sub { font-size: 17px; font-family: ui-monospace, monospace; color: var(--text-faint, #94a3b8); letter-spacing: .3em; }
+.toc-list { position: absolute; left: 480px; right: 90px; top: 0; bottom: 0;
+  display: flex; flex-direction: column; justify-content: center; gap: 46px; }
+.toc-item { display: flex; align-items: flex-start; gap: 30px; cursor: pointer;
+  transition: transform .25s cubic-bezier(.16,1,.3,1); }
+.toc-item:hover { transform: translateX(10px); }
+.toc-body { min-width: 0; }
+.toc-num { font-family: ui-monospace, monospace; font-size: 42px; font-weight: 700;
+  color: var(--ys-blue, #2f6fd0); line-height: 1.1; min-width: 76px; }
+.toc-chapter { display: block; font-size: 32px; font-weight: 700; color: var(--tpl-navy, #16294a);
+  line-height: 1.3; transition: color .2s ease; }
+.toc-item:hover .toc-chapter { color: var(--ys-blue, #2f6fd0); }
+.toc-desc { display: block; font-size: 21px; color: var(--text-sub); margin-top: 7px; line-height: 1.45; }
+section.slide .page-num { position: absolute; bottom: 28px; right: 90px; font-size: 14px;
+  color: var(--text-faint, #94a3b8); letter-spacing: .1em; font-weight: 400; }
 .page-title { font-size: 40px; font-weight: 700; color: var(--text); line-height: 1.2; }
 .page-claim { font-size: 21px; color: var(--text-sub); font-weight: 500; line-height: 1.4; }
 .key { font-weight: 700; color: var(--c-exec); }
@@ -255,10 +277,42 @@ body:not(.browse) .slide.current .cov-a.d3 { transition-delay: .55s }
     </div>
   </section>
 
+<!-- ============ 目录（章级 4 条；data-toc 点击跳章首页，引擎内置；入场 enter 逐条） ============ -->
+<section class="slide" data-label="目录">
+  <div class="toc-side">
+    <div class="eyebrow">CONTENTS</div>
+    <div class="toc-word">目录</div>
+    <div class="toc-sub">AGENDA</div>
+  </div>
+  <div class="toc-list">
+    <div class="toc-item" data-toc="背景">
+      <span class="toc-num">01</span>
+      <span class="toc-body"><b class="toc-chapter">背景与形态：为什么做、做成什么样</b>
+        <i class="toc-desc">手工交付的痛与数据交付 Agent 的产品形态 · P03–04</i></span>
+    </div>
+    <div class="toc-item" data-toc="流转">
+      <span class="toc-num">02</span>
+      <span class="toc-body"><b class="toc-chapter">机制设计：引擎如何咬合运转</b>
+        <i class="toc-desc">岗岗流转闭环 · 编排扇出 · 五道校验闸 · P05–07</i></span>
+    </div>
+    <div class="toc-item" data-toc="场景">
+      <span class="toc-num">03</span>
+      <span class="toc-body"><b class="toc-chapter">场景落地：三类典型任务怎么用</b>
+        <i class="toc-desc">新建 · 优化 · 疑难分流与多岗协同 · P08–10</i></span>
+    </div>
+    <div class="toc-item" data-toc="成果">
+      <span class="toc-num">04</span>
+      <span class="toc-body"><b class="toc-chapter">成效与推广：拿到的效果、走得多远</b>
+        <i class="toc-desc">量化成果 · 价值账 · 内部推广与批量使用 · P11–14</i></span>
+    </div>
+  </div>
+  <div class="page-num">02 / 15</div>
+</section>
+
 <!-- ============ 背景（ rebuilt：新版头 + A 型定位链 + B 型三区讲解） ============ -->
 <section class="slide" data-label="背景">
   <div class="slide-content">
-    <div class="eyebrow">01 · 背景 / BACKGROUND</div>
+    <div class="eyebrow">1.1 · 背景 / BACKGROUND</div>
     <h3 class="title">设计开发段：重做功、重经验，<span class="key">agent 接管「做」，人守住「判」</span></h3>
     <p class="claim">整套体系基于公司 codeagent 平台（agent 运行环境）搭建：接 BA 的《RS》+《mapping》，交设计文档与四件套制品——替代今天一段段的人肉工序。</p>
     <div class="svg-stage">
@@ -328,7 +382,7 @@ body:not(.browse) .slide.current .cov-a.d3 { transition-delay: .55s }
 <!-- ============ 形态（新版头 + 源图原样；动画待定稿后按动画地图申报） ============ -->
 <section class="slide" data-label="形态">
   <div class="slide-content">
-    <div class="eyebrow">02 · 形态 / PIPELINE</div>
+    <div class="eyebrow">1.2 · 形态 / PIPELINE</div>
     <h3 class="title">一条流水线八道工序，人只在<span class="key">两个闸口</span>出手</h3>
     <p class="claim">吃 RS+mapping（需求 spec + 字段映射），吐 TS + 四件套制品。UT 直连开发库两阶段收尾，代码稳定后交付下游。</p>
     <div class="svg-stage">
@@ -456,7 +510,7 @@ body:not(.browse) .slide.current .cov-a.d3 { transition-delay: .55s }
 <!-- ============ 流转（新版头 + 重绘图：等高主链 + 零交叉分流梯子） ============ -->
 <section class="slide" data-label="流转">
   <div class="slide-content">
-    <div class="eyebrow">03 · 流转 / FLOW</div>
+    <div class="eyebrow">2.1 · 流转 / FLOW</div>
     <h3 class="title">一条主链五条回路：<span class="key">失败回岗，人判在闸口</span></h3>
     <p class="claim">流转全自动：三类失败按根因打回对应岗；两个闸口人判——不收就打回重做。</p>
     <div class="svg-stage">
@@ -549,7 +603,7 @@ body:not(.browse) .slide.current .cov-a.d3 { transition-delay: .55s }
 <!-- ============ 编排（新版头 + 源图原样；动画待定稿后按动画地图申报） ============ -->
 <section class="slide" data-label="编排">
   <div class="slide-content">
-    <div class="eyebrow">04 · 编排 / ORCHESTRATION</div>
+    <div class="eyebrow">2.2 · 编排 / ORCHESTRATION</div>
     <h3 class="title">编排岗加三个专业岗：<span class="key">职责边界写进权限</span>，问题沿路由上交</h3>
     <p class="claim">一个编排岗（engineer）起三个专业岗（designer / dq-producer / coder），Task 直连；每个岗只能写自己的产物，越界落不了盘。</p>
     <div class="svg-stage">
@@ -632,7 +686,7 @@ body:not(.browse) .slide.current .cov-a.d3 { transition-delay: .55s }
 <!-- ============ 校验（新版头 + 源图原样；动画待定稿后按动画地图申报） ============ -->
 <section class="slide" data-label="校验">
   <div class="slide-content">
-    <div class="eyebrow">05 · 校验 / VERIFICATION</div>
+    <div class="eyebrow">2.3 · 校验 / VERIFICATION</div>
     <h3 class="title">AI 生成、脚本把关：<span class="key">五道确定性校验</span>贯穿全程</h3>
     <p class="claim">质检独立性来自「生成者 = LLM，把关者 = 确定性脚本」——同一脚本跑两遍结果必然相同，收卷对账即可，不重验。</p>
     <div class="svg-stage">
@@ -729,7 +783,7 @@ body:not(.browse) .slide.current .cov-a.d3 { transition-delay: .55s }
 <!-- ============ 场景（新版头 + 源图原样；动画待定稿后按动画地图申报） ============ -->
 <section class="slide" data-label="场景">
   <div class="slide-content">
-    <div class="eyebrow">06 · 场景 / SCENARIOS</div>
+    <div class="eyebrow">3.1 · 场景 / SCENARIOS</div>
     <h3 class="title">新建与优化<span class="key">共用一条主干</span>，优化只精确修改</h3>
     <p class="claim">差异只在入口材料。优化场景已建成：档案做底本、围栏守边界、影响分析定重做范围——变更恰好等于声明。</p>
     <div class="svg-stage">
@@ -812,7 +866,7 @@ body:not(.browse) .slide.current .cov-a.d3 { transition-delay: .55s }
 <!-- ============ 分流（新版头 + 源图原样；动画待定稿后按动画地图申报） ============ -->
 <section class="slide" data-label="分流">
   <div class="slide-content">
-    <div class="eyebrow">07 · 分流 / TRIAGE</div>
+    <div class="eyebrow">3.2 · 分流 / TRIAGE</div>
     <h3 class="title">失败按根因找岗：<span class="key">SQL 回 coder，数据质量退设计</span></h3>
     <p class="claim">分流判定树：每类失败按识别特征路由到唯一归宿，轮次有限——告警不进自动迭代，方案在人手里。</p>
     <div class="svg-stage">
@@ -894,7 +948,7 @@ body:not(.browse) .slide.current .cov-a.d3 { transition-delay: .55s }
 <!-- ============ 协同（新版头 + 源图原样；动画待定稿后按动画地图申报） ============ -->
 <section class="slide" data-label="协同">
   <div class="slide-content">
-    <div class="eyebrow">08 · 协同 / INTEGRATION</div>
+    <div class="eyebrow">3.3 · 协同 / INTEGRATION</div>
     <h3 class="title">对外靠 <span class="key">spec 交接</span>，对内靠 <span class="key">直连</span></h3>
     <p class="claim">对上下游只交接 spec；总控 Task 直连编排岗，数据库脚本直连——MCP 全线禁用；每个平台是制品的目的地。</p>
     <div class="svg-stage">
@@ -971,7 +1025,7 @@ body:not(.browse) .slide.current .cov-a.d3 { transition-delay: .55s }
 <!-- ============ 成果（新版头 + 源图原样；动画待定稿后按动画地图申报） ============ -->
 <section class="slide" data-label="成果">
   <div class="slide-content">
-    <div class="eyebrow">09 · 成果 / DELIVERABLES</div>
+    <div class="eyebrow">4.1 · 成果 / DELIVERABLES</div>
     <h3 class="title">全链路能力建成：<span class="key">五层实现、一套技术底座</span></h3>
     <p class="claim">五层实现：编排剧本、agent 岗位、知识包、确定性脚本、公共设施——每一件都在工具注册表和测试守护下。</p>
     <div class="svg-stage">
@@ -1053,7 +1107,7 @@ body:not(.browse) .slide.current .cov-a.d3 { transition-delay: .55s }
 <!-- ============ 价值（新版头 + 源图原样；动画待定稿后按动画地图申报） ============ -->
 <section class="slide" data-label="价值">
   <div class="slide-content">
-    <div class="eyebrow">10 · 价值 / VALUE</div>
+    <div class="eyebrow">4.2 · 价值 / VALUE</div>
     <h3 class="title">价值收益：<span class="key">一周多的设计开发，1~2 天交付</span></h3>
     <p class="claim">内部口径（试点观察）：机器产出 ≤1 小时，端到端 1~2 天——含 SE 需求口径对接、开发评审与测试；量化评测以平台独立报告为准。</p>
     <div class="svg-stage">
@@ -1116,7 +1170,7 @@ body:not(.browse) .slide.current .cov-a.d3 { transition-delay: .55s }
 <!-- ============ 进展（新版头 + 源图原样；动画待定稿后按动画地图申报） ============ -->
 <section class="slide" data-label="进展">
   <div class="slide-content">
-    <div class="eyebrow">11 · 进展 / STATUS</div>
+    <div class="eyebrow">4.3 · 进展 / STATUS</div>
     <h3 class="title">主干已在<span class="key">codeagent 平台</span>真实案例运行，验证与扩充在继续</h3>
     <p class="claim">三栏看状态：建成即用、真环境验证、下一步清单——每项都有明确判据，不写愿景。</p>
     <div class="svg-stage">
@@ -1170,7 +1224,7 @@ body:not(.browse) .slide.current .cov-a.d3 { transition-delay: .55s }
 <!-- ============ 推广（收官内容页：产品内推广完成 + 财经法务批量使用） ============ -->
 <section class="slide" data-label="推广">
   <div class="slide-content">
-    <div class="eyebrow">12 · 推广 / ROLLOUT</div>
+    <div class="eyebrow">4.4 · 推广 / ROLLOUT</div>
     <h3 class="title">推广成效：产品内推广完成，<span class="key">财经法务项目批量使用</span></h3>
     <p class="claim">能力从技术验证走向规模化：试点跑通 → 产品内推广完成 → 财经法务项目批量真实交付。</p>
     <div class="svg-stage">
@@ -1272,6 +1326,7 @@ const DECK_GAP = 24;
      必需  #deckStage > #deckFit > section.slide×N（每页 data-label 必填）
      必需  #deckBar：#progressBar #deckPage #presentBtn #deckMenu
      可选  #deckSidebar > #deckThumbs + #tocClose（缩略图目录）
+     可选  [data-toc]（目录页条目：点击跳到 data-label=属性值 的页；浏览/放映皆生效）
      可选  #presCursor / #presCursorHint（聚光灯光标，无则 P 键不启用）
      可选  #playerHint / #presCursorHint（提示条，flashHint 已判空）
    配置（deck 数据区声明，引擎只读）：
@@ -1279,7 +1334,7 @@ const DECK_GAP = 24;
    混合层（stepfx.js/auto.js/ambient.js）依赖：window.__deck、syncChrome
    内派发 deckpage 事件、data-label 页标识。本文件声明版本号供门禁断言。
    ===================================================================== */
-window.DECK_ENGINE_VERSION = '1.5.0';
+window.DECK_ENGINE_VERSION = '1.6.0';
 
 class DeckPlayer {
     constructor() {
@@ -1456,6 +1511,13 @@ class DeckPlayer {
     }
     bindClick() {
         document.addEventListener('click', e => {
+            const toc = e.target.closest('[data-toc]');          // 目录条目：跳章首页（早于推进判断，放映中点击=跳页不翻页）
+            if (toc) {
+                const i = this.slides.findIndex(s => s.dataset.label === toc.dataset.toc);
+                if (i >= 0) { this.closeToc(); this.show(i); }
+                else console.warn(`[deck] data-toc 死链：${toc.dataset.toc}（e2e 门禁会拦截）`);
+                return;
+            }
             const sb = document.getElementById('deckSidebar');
             if (sb?.classList.contains('open') && !e.target.closest('.deck-sidebar, .deck-menu')) { this.closeToc(); return; } // 点侧栏外即关闭
             if (!this.presenting) return;
@@ -1750,6 +1812,8 @@ Object.assign(DeckPlayer.prototype, {
              ['flows', [[x1,y1,x2,y2, color?],...], dur?, color?]  多条流线同时流转（扇出/并行；每线颜色可单独覆盖）
              ['pulse', [x,y,w,h]]              到站脉冲：区域中心蓝色涟漪，~750ms 即逝，不染色
              ['pulses', [[x,y,w,h],...]]       多区域同时脉冲（同步到站语义）
+             ['enter', 'selector', staggerMs?] DOM 入场：页内匹配元素依次淡入上移（stagger 缺省 90ms；
+                                               唯一不依赖 SVG 的微指令；结束即清内联样式，页面恢复原样）
              ['lit', [x,y,w,h]]                （遗留·染色）区域点亮——不染色法则下禁用
              ['wseq', [rect,...]]              （遗留·染色）多区域连播——同上
    序列收尾：fx 层清空，页面 100% 恢复原样（终态不变式）；
@@ -1801,6 +1865,32 @@ Object.assign(DeckPlayer.prototype, {
                 raf = requestAnimationFrame(tick);
             });
         }
+        /* DOM 入场：匹配元素整体先藏，再逐个淡入上移；快进/跳页一律还原内联样式（终态不变式） */
+        function enter(sel, stagger) {
+            return new Promise(res => {
+                const els = [...deck.slides[deck.current].querySelectorAll(sel)];
+                if (!els.length) return res();
+                const gap = stagger || 90, dur = 420, rise = 16;
+                els.forEach(el => { el.style.opacity = '0'; el.style.transform = `translateY(${rise}px)`; });
+                const total = els.length * gap + dur, t0 = performance.now();
+                const tick = now => {
+                    if (skip || deck.current !== pageIdx) {
+                        els.forEach(el => { el.style.opacity = ''; el.style.transform = ''; });
+                        return res();
+                    }
+                    const t = now - t0;
+                    els.forEach((el, i) => {
+                        const k = Math.min(1, Math.max(0, (t - i * gap) / dur));
+                        const e = 1 - Math.pow(1 - k, 3);
+                        el.style.opacity = String(e);
+                        el.style.transform = `translateY(${rise * (1 - e)}px)`;
+                    });
+                    if (t < total) raf = requestAnimationFrame(tick);
+                    else { els.forEach(el => { el.style.opacity = ''; el.style.transform = ''; }); res(); }
+                };
+                raf = requestAnimationFrame(tick);
+            });
+        }
         function move(x1, y1, x2, y2, dur, color) {              // （遗留·光点）不染色法则下新 deck 勿用
             return new Promise(res => {
                 if (!deck.slides[deck.current].querySelector('svg')) return res();
@@ -1832,6 +1922,7 @@ Object.assign(DeckPlayer.prototype, {
                 else if (m[0] === 'move') await move(m[1], m[2], m[3], m[4], m[5] || 500, m[6]);
                 else if (m[0] === 'pulse') { pulse(m[1]); await deck.wait(skip ? 60 : 420); }
                 else if (m[0] === 'pulses') { for (const r of m[1]) pulse(r); await deck.wait(skip ? 60 : 750); }
+                else if (m[0] === 'enter') await enter(m[1], m[2]);
             }
             if (stale()) { deck.autoBusy = false; return; }      // 已换页：fx 归新页面序列所有
             deck.autoBusy = false;
@@ -2854,9 +2945,10 @@ function collectEditableScene(slideIndex) {
 /* ═══════ 动画申报（光点语言版 · 格式见 references/animation.md）═══════
    法则：动画住在箭头上（光点飞行），卡片到站脉冲即逝（~750ms），演完页面 100% 恢复原样；
         持久染色机制（lit/wseq/w/state/veil）本 deck 一律不用，讲者强调用聚光灯（P）。
-   地图：封面=入场动效(CSS) · 背景/形态/校验/编排/分流/进展/推广=一次性光点动线 ·
+   地图：封面=入场动效(CSS) · 目录=条目逐个入场 · 背景/形态/校验/编排/分流/进展/推广=一次性光点动线 ·
         流转=常驻「最复杂的一天」 · 成果/价值=数字滚动 */
 window.DECK_AUTO = {   /* A 型流线动线：撑大段沿箭头流转 + 到站脉冲，进页演一遍即静止；点击=快进 */
+    '目录': [['enter', '.toc-item', 90]],                                                                                                              // 条目逐个入场
     '背景': [['flow',125,56,520,56,900],['pulse',[252,26,536,60]],['flow',520,56,915,56,900],['pulse',[820,32,190,48]]],                              // DDLC 定位链
     '形态': [['flow',155,44,485,44,800],['pulse',[340,26,290,36]],['flow',485,44,840,44,800],['pulse',[670,26,340,36]]],                              // spec 演化链
     '编排': [['pulse',[30,36,310,176]],['flows',[[185,124,702,66],[185,124,702,128],[185,124,702,190]],900],['pulse',[394,40,616,52]],['pulse',[394,102,616,52]],['pulse',[394,164,616,52]],['pulse',[42,254,200,40]],['flow',142,274,413,274,600],['flow',413,274,682,274,600],['flow',682,274,900,274,600],['pulse',[802,254,196,40]]],   // 上：扇出起三岗；下：上报路由（两块独立，互不连线）

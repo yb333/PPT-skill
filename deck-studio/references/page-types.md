@@ -7,8 +7,7 @@
 | 页型 | 长什么样 | 常用于 |
 |------|---------|--------|
 | 封面 | 超大主标题 + 强调色副标题条 + 底部主讲人/日期行 | deck 第一页，一份一张 |
-| 目录 | 条目列表（章号 mono + 章名 + 一句摘要） | 章节总览 |
-| 章扉页 | 超大半透明章号水印 + SECTION 标签 + 大章名 + 副题 + 小节关键词胶囊 | 每章开头 |
+| 目录 | 左侧竖排"目录/CONTENTS"+ 右侧章级条目（章号 mono + 章名 + 一句摘要 + 页码范围），条目可点跳页 | **≥7 页 deck 必备**，紧跟封面 |
 | 内容页骨架 | eyebrow + 大标题 + 主体（flex:1） | **大多数页的起点** |
 | 卡片网格 | 2×3 / 3×2 同构卡片阵列 | 一组并列概念/能力/要点 |
 | 左图右文 | 左图（height:100% 放大填满）+ 右文解释列 | 一图为主、文字为辅 |
@@ -20,9 +19,43 @@
 | 金句页 | 深底大字一句话 + 署名 | 章节小结、情绪落点 |
 | 结语页 | 致谢 + 行动号召/联系方式 | deck 最后一页 |
 
-节奏规则：**连续 3 页不用同一视觉家族**；密页（表格/密集多栏）后面接轻页（全幅图/金句）缓一口气。
+节奏规则：**连续 3 页不用同一视觉家族**；密页（表格/密集多栏）后面接轻页（全幅图/金句）缓一口气。章扉页已退役：结构职能由目录页承担，不再生成。
 
 ## 关键骨架
+
+### 目录页（≥7 页 deck 必备，紧跟封面）
+
+deck 按章规划（process.md：先分章再排页），目录是章级结构的唯一承载，每条对应一章：
+
+```html
+<section class="slide" data-label="目录">
+  <div class="brand-corner"><i></i><i></i></div>
+  <div class="toc-side">
+    <div class="eyebrow">CONTENTS</div>
+    <div class="toc-word">目录</div>
+    <div class="toc-sub">AGENDA</div>
+  </div>
+  <div class="toc-list">
+    <div class="toc-item" data-toc="章首页label">
+      <span class="toc-num">01</span>
+      <span class="toc-body"><b class="toc-chapter">章名：这一章回答的子问题</b>
+        <i class="toc-desc">一句话说明本章内容 · P03–04</i></span>
+    </div>
+    <!-- × 3–6 条 -->
+  </div>
+  <div class="page-num">02 / N</div>
+</section>
+```
+
+硬规则（e2e 门禁拦截）：
+
+- **章级粒度，3–6 条**（门禁区间 2–9）：目录列章不列页，14 页的 deck 列 13 条必撞密度门禁
+- `data-toc` = 该章**首页**的 `data-label`；点击跳页由引擎内置（放映/浏览皆可），**禁手写跳页 JS**；e2e 检查死链
+- 条目序号 = 章号，与各内容页 eyebrow 的 `章.节` 编号（`1.1 · 背景`）一致——观众随时对得上"讲到第几章"
+- 描述行带页码范围（`P03–04`）：手工维护，页序变动时与 eyebrow 同批更新
+- 入场动画：`window.DECK_AUTO = { 目录: [['enter', '.toc-item', 90]] }`（animation.md enter 微指令）；
+  不做"回到目录高亮当前章"——遇到真实需要再加
+- ≤6 页的 deck 不放目录：条目比页还多是负担
 
 ### 内容页骨架（最常用）
 
@@ -96,20 +129,6 @@
   <div><span style="font-size:72px;font-weight:800;color:var(--c-exec);">1.76×</span><span style="font-size:21px;color:var(--text);"> 吞吐</span></div>
   <!-- × 3–4 联；数字必大必变色，单位小号紧贴（copywriting.md 数字用法） -->
 </div>
-```
-
-### 章扉页（padding 108px 130px）
-
-```html
-<section class="slide" data-label="章扉·01">
-  <div style="position:absolute;top:60px;left:90px;font-size:220px;font-weight:800;color:var(--c-info);opacity:.12;">01</div>
-  <div style="margin-top:auto;">
-    <div style="font-family:ui-monospace,monospace;font-size:18px;letter-spacing:.2em;color:var(--c-exec);">SECTION 01 · 15 MIN</div>
-    <h2 style="font-size:96px;font-weight:700;margin:16px 0;">章名</h2>
-    <p style="font-size:24px;color:var(--text-sub);max-width:60%;">一两句章副题</p>
-    <div style="display:flex;gap:12px;margin-top:24px;"><span style="border:1px solid var(--border-card);border-radius:999px;padding:6px 16px;font-size:15px;">关键词</span>…</div>
-  </div>
-</section>
 ```
 
 ### 金句页（深底）

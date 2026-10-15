@@ -10,6 +10,7 @@
      必需  #deckStage > #deckFit > section.slide×N（每页 data-label 必填）
      必需  #deckBar：#progressBar #deckPage #presentBtn #deckMenu
      可选  #deckSidebar > #deckThumbs + #tocClose（缩略图目录）
+     可选  [data-toc]（目录页条目：点击跳到 data-label=属性值 的页；浏览/放映皆生效）
      可选  #presCursor / #presCursorHint（聚光灯光标，无则 P 键不启用）
      可选  #playerHint / #presCursorHint（提示条，flashHint 已判空）
    配置（deck 数据区声明，引擎只读）：
@@ -17,7 +18,7 @@
    混合层（stepfx.js/auto.js/ambient.js）依赖：window.__deck、syncChrome
    内派发 deckpage 事件、data-label 页标识。本文件声明版本号供门禁断言。
    ===================================================================== */
-window.DECK_ENGINE_VERSION = '1.5.0';
+window.DECK_ENGINE_VERSION = '1.6.0';
 
 class DeckPlayer {
     constructor() {
@@ -194,6 +195,13 @@ class DeckPlayer {
     }
     bindClick() {
         document.addEventListener('click', e => {
+            const toc = e.target.closest('[data-toc]');          // 目录条目：跳章首页（早于推进判断，放映中点击=跳页不翻页）
+            if (toc) {
+                const i = this.slides.findIndex(s => s.dataset.label === toc.dataset.toc);
+                if (i >= 0) { this.closeToc(); this.show(i); }
+                else console.warn(`[deck] data-toc 死链：${toc.dataset.toc}（e2e 门禁会拦截）`);
+                return;
+            }
             const sb = document.getElementById('deckSidebar');
             if (sb?.classList.contains('open') && !e.target.closest('.deck-sidebar, .deck-menu')) { this.closeToc(); return; } // 点侧栏外即关闭
             if (!this.presenting) return;

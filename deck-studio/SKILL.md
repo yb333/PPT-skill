@@ -44,6 +44,8 @@ frontend-slides 的融合重构后继。相比原技能新增：**人机协同�
 
 目标：把一句话需求变成确认过的大纲。**协作深度规范见 `references/process.md`（必读）**——五件事问询（听众/场合时长/目标/素材/品牌交付）、需求共识复述、先整理材料事实、场景适配（授课/汇报/自读三场景的页数节奏与语言风格）、`<deck名>.plan.md` 落盘。
 
+大纲**先分章再排页**（process.md 按章规划）：3–6 章、每章 2–5 页，页挂章下；≥7 页的 deck 第 2 页放目录页（章级条目，可点跳页），条目序号与各页 eyebrow 的 `章.节` 编号一致。
+
 大纲格式（进 plan.md）：每页一行 `| # | label | 这页要说啥（一句话） | 布局 | 配图 |`。label 即 `data-label`。
 
 - ⏸️ **闸门：用户确认大纲后才进 Phase 2**。用户催"直接做"时改为带默认值的一轮快答，不跳过确认。
@@ -64,7 +66,7 @@ frontend-slides 的融合重构后继。相比原技能新增：**人机协同�
 
 输入：Phase 1 内容 + Phase 2 spec + Phase 3 风格。产出单 HTML 文件，**从模板起步、引擎由工具写入**：
 
-1. **复制模板**：`assets/templates/yunshan.html` 是全页型骨架基准（封面/内容页/卡片网格/表格混排/深蓝金句/结束页 + 引擎标记块占位）。云山体系直接用；其他品牌删品牌资产、换 token，骨架照用。
+1. **复制模板**：`assets/templates/yunshan.html` 是全页型骨架基准（封面/目录/内容页/卡片网格/表格混排/深蓝金句/结束页 + 引擎标记块占位）。云山体系直接用；其他品牌删品牌资产、换 token，骨架照用。
 2. **填内容**：按 `references/page-types.md` 选型/增删 section（占位说明即"这栏该写什么"）；排版对照 `references/layout.md` 刻度；图表自绘读 `references/svg-diagrams.md`（inline SVG，禁 emoji/ASCII 图）；文案对照 `references/copywriting.md`；封面/结束页只改填写区文字，不重画。
 3. **申报动画**：默认零动画；需要时按 `references/animation.md` 机制速查表，在数据区声明 `DECK_AUTO` / `DECK_STEPS` / `DECK_COUNTUP` / `DECK_AMBIENT`（坐标 = 页 svg viewBox 体系）。
 4. **写引擎**：不手写引擎——`node <skill>/scripts/sync-engine.mjs <deck.html>` 把 `═══ DECK ENGINE ═══` 标记块写入。唯一源是 `assets/effects/` 五件套，**严禁手改块内代码**。
@@ -115,7 +117,7 @@ python3 <skill>/scripts/html2pptx/convert.py <deck.html> <out.pptx>   # image �
 | `references/svg-diagrams.md` | Phase 4 —— 架构图/流程图/图表规范与模板 |
 | `references/animation.md` | Phase 2/4 —— 动画申报制：流线语言法则、机制速查表、四类声明格式、节奏依据 |
 | `assets/effects/` | Phase 4 —— 引擎唯一源六件套（player.js 核心 / stepfx.js 步进 / auto.js 流线动线 / countup.js 数字滚动 / ambient.js 常驻流转 / exporter.js 一键导出 + effects.css）：标记块由 sync-engine 写入，**严禁手改**；作者只写数据声明。deck-bar 含 #pptxBtn 时按 P 一键导出快照 PPTX |
-| `assets/templates/yunshan.html` | Phase 4 —— 品牌模板与全页型骨架基准（封面/内容页/卡片网格/表格混排/深蓝金句/结束页）：复制后改填写区、按页型增删 section、替换占位文案 |
+| `assets/templates/yunshan.html` | Phase 4 —— 品牌模板与全页型骨架基准（封面/目录/内容页/卡片网格/表格混排/深蓝金句/结束页）：复制后改填写区、按页型增删 section、替换占位文案 |
 | `scripts/` | Phase 4/5/7 —— sync-engine（引擎写入/校验）、verify 四件套（溢出/截图/e2e/目检）、html2pptx（导出） |
 | `references/copywriting.md` | Phase 1/2/4 —— 文案规范（中文、标题句式、数字） |
 

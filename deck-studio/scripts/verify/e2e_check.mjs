@@ -55,6 +55,22 @@ try {
   ok(await page.evaluate(() => document.getElementById('deckStage').scrollHeight > 1500),
      '浏览模式=无缝长页（stage 内容高度远超一屏）');
 
+  // —— 目录页契约（page-types.md）：≥7 页必备；data-toc 不得死链；条目 2–9 条 ——
+  console.log('== 目录页契约 ==');
+  const toc = await page.evaluate(() => {
+    const slides = [...document.querySelectorAll('section.slide')];
+    const labels = new Set(slides.map(s => s.dataset.label).filter(Boolean));
+    const items = [...document.querySelectorAll('section.slide [data-toc]')];
+    return { total: slides.length, entries: items.length,
+             dead: items.map(t => t.dataset.toc).filter(v => !labels.has(v)) };
+  });
+  if (toc.total >= 7 && toc.entries === 0)
+    ok(false, `${toc.total} 页 deck 缺目录页（≥7 页必须提供章级目录，见 page-types.md）`);
+  else
+    ok(true, `目录契约：${toc.total} 页 / 目录条目 ${toc.entries} 条`);
+  ok(toc.entries === 0 || (toc.entries >= 2 && toc.entries <= 9), `目录条目数合理（${toc.entries}，合理区间 2–9）`);
+  ok(toc.dead.length === 0, `data-toc 无死链${toc.dead.length ? '：指向不存在的 data-label → ' + toc.dead.join(', ') : ''}`);
+
   // —— 浏览模式：逐页翻页，reveal 必须全可见（阅读模式），无白页 ——
   console.log('== 浏览模式逐页翻页 ==');
   for (let i = 1; i < s0.total; i++) {
@@ -69,6 +85,31 @@ try {
   await page.waitForTimeout(500);
   const sb = await state();
   ok(sb.current === s0.total - 2, `← 回翻到第 ${s0.total - 1} 页（实际 ${sb.current}）`);
+
+  // —— 目录条目点击跳页（引擎 data-toc 契约，浏览态真实点击）——
+  if (toc.entries > 0) {
+    console.log('== 目录条目点击跳页 ==');
+    const target = await page.evaluate(() => {
+      const t = document.querySelector('section.slide [data-toc]');
+      return [...document.querySelectorAll('section.slide')].findIndex(s => s.dataset.label === t.dataset.toc);
+    });
+    await page.evaluate(() => document.querySelector('section.slide [data-toc]').click());
+    await page.waitForFunction(i => {
+      const s = [...document.querySelectorAll('section.slide')];
+      return s.findIndex(x => x.classList.contains('current')) === i;
+    }, target, { timeout: 5000 }).catch(() => {});
+    await page.waitForTimeout(500);
+    const stT = await state();
+    ok(stT.current === target, `点目录条目跳到第 ${target + 1} 页（实际 current=${stT.current}）`);
+    await page.keyboard.press('Home');
+    await page.waitForFunction(() => {
+      const s = [...document.querySelectorAll('section.slide')];
+      return s.findIndex(x => x.classList.contains('current')) === 0;
+    }, { timeout: 5000 }).catch(() => {});
+    await page.waitForTimeout(300);
+    const stH = await state();
+    ok(stH.current === 0, `Home 回到封面（实际 current=${stH.current}）`);
+  }
 
   // —— 放映模式：F 恒自封面起（产品决策：从头播放），申报程序（DECK_STEPS）优先，回退 reveal 节拍 ——
   console.log('== 放映模式：自封面起 · 申报程序 / 节拍步进 ==');
