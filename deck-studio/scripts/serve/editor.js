@@ -52,11 +52,28 @@
         b.addEventListener('click', () => applyStyle('color', b.style.background));
         bar.appendChild(b);
     });
-    const sizeSel = document.createElement('select');
-    sizeSel.title = '字号（刻度档）';
-    sizeSel.innerHTML = '<option value="">字号</option>' + SIZES.map(s => `<option value="${s}">${s}</option>`).join('');
-    sizeSel.addEventListener('change', () => { if (sizeSel.value) applyStyle('fontSize', sizeSel.value + 'px'); sizeSel.value = ''; });
-    bar.appendChild(sizeSel);
+    const sizeMinus = document.createElement('button');
+    sizeMinus.textContent = '−';
+    sizeMinus.title = '字号 −（刻度档）';
+    sizeMinus.addEventListener('click', () => stepSize(-1));
+    const sizeReadout = document.createElement('span');
+    sizeReadout.className = 'deck-edit-size';
+    const sizePlus = document.createElement('button');
+    sizePlus.textContent = '+';
+    sizePlus.title = '字号 +（刻度档）';
+    sizePlus.addEventListener('click', () => stepSize(1));
+    bar.appendChild(sizeMinus);
+    bar.appendChild(sizeReadout);
+    bar.appendChild(sizePlus);
+    /* dir>0 取刻度上档、<0 取下档（当前值恰在刻度上时取相邻档） */
+    function stepSize(dir) {
+        if (!selected) return;
+        const fs = parseFloat(getComputedStyle(selected).fontSize);
+        const cand = dir > 0 ? SIZES.find(s => s > fs + .5) : [...SIZES].reverse().find(s => s < fs - .5);
+        if (!cand) return;
+        applyStyle('fontSize', cand + 'px');
+        sizeReadout.textContent = cand;
+    }
     const boldBtn = document.createElement('button');
     boldBtn.textContent = 'B';
     boldBtn.title = '加粗/取消';
@@ -131,6 +148,7 @@
     }
     function placeBar() {
         if (!selected || bar.hidden) return;
+        sizeReadout.textContent = Math.round(parseFloat(getComputedStyle(selected).fontSize)) || '';
         const r = selected.getBoundingClientRect();
         bar.style.left = Math.max(8, Math.min(innerWidth - bar.offsetWidth - 8, r.left)) + 'px';
         bar.style.top = Math.max(8, r.top - bar.offsetHeight - 8) + 'px';
@@ -156,7 +174,56 @@
         if (now !== old) pushOp({ type: 'text', el, prop: 'text', old, new: now });
     }
 
-    /* —— 挪位：绝对定位改 left/top，流式改 margin（真实布局变化，可序列化）—— */
+    /* —— 挪位：绝对定位改 left/top，流式改 margin（真实布局变化，可序列化）——
+       对齐吸附：候选轴值接近同页其他元素/页面画布的边与中线时吸齐并画参考线（PPT 手感） */
+    const SNAP = 5;
+    const guides = ui('div');
+    guides.className += ' deck-edit-guides';
+    document.body.appendChild(guides);
+    function showGuides(list) {                   // list: [{axis:'x'|'y', at: viewportPx, rect: slideRect}]
+        guides.innerHTML = '';
+        for (const g of list) {
+            const line = document.createElement('i');
+            line.className = g.axis === 'x' ? 'vg' : 'hg';
+            if (g.axis === 'x') { line.style.left = g.at + 'px'; line.style.top = g.rect.top + 'px'; line.style.height = g.rect.height + 'px'; }
+            else { line.style.top = g.at + 'px'; line.style.left = g.rect.left + 'px'; line.style.width = g.rect.width + 'px'; }
+            guides.appendChild(line);
+        }
+    }
+    function snapCandidates(el) {                 // 参考系：同页可见元素的边/中线 + 页面画布本身
+        const slide = el.closest('section.slide');
+        if (!slide) return { xs: [], ys: [], rect: slide?.getBoundingClientRect() };
+        const rect = slide.getBoundingClientRect();
+        const xs = [rect.left, rect.right, rect.left + rect.width / 2];
+        const ys = [rect.top, rect.bottom, rect.top + rect.height / 2];
+        for (const n of slide.querySelectorAll('*')) {
+            if (n === el || el.contains(n) || n.closest('.deck-editor-ui')) continue;
+            const r = n.getBoundingClientRect();
+            if (r.width < 8 || r.height < 8) continue;
+            const cs = getComputedStyle(n);
+            if (cs.visibility === 'hidden' || parseFloat(cs.opacity) < 0.05) continue;
+            xs.push(r.left, r.right, r.left + r.width / 2);
+            ys.push(r.top, r.bottom, r.top + r.height / 2);
+        }
+        return { xs, ys, rect };
+    }
+    function snapAxis(el, axis, proposed) {       // proposed: 视口坐标；命中返回 {shift, guide}，否则 {}
+        const { xs, ys, rect } = snapCache || snapCandidates(el);
+        const cands = axis === 'x' ? xs : ys;
+        const r = el.getBoundingClientRect();
+        const cur = axis === 'x' ? r.left : r.top;
+        const delta = proposed - cur;
+        const mine = axis === 'x'
+            ? [r.left + delta, r.right + delta, r.left + r.width / 2 + delta]
+            : [r.top + delta, r.bottom + delta, r.top + r.height / 2 + delta];
+        let best = null;
+        for (const m of mine) for (const c of cands) {
+            const d = Math.abs(m - c);
+            if (d <= SNAP && (!best || d < best.d)) best = { d, at: c, shift: c - m };
+        }
+        return best ? { shift: best.shift, guide: { axis, at: best.at, rect } } : {};
+    }
+    let snapCache = null;                         // 一次拖拽手势内复用参考系（元素自身移动不影响他人）
     const moveProps = el => {
         const pos = getComputedStyle(el).position;
         return (pos === 'absolute' || pos === 'fixed')
@@ -165,6 +232,7 @@
     };
     const px = v => Math.round(parseFloat(v) || 0);
     const curProp = (el, prop) => px(getIn(el, prop) || getComputedStyle(el)[prop]);
+    /* 方向键=1px 精调不吸附（PPT 模型：吸附只在拖拽时生效，否则对齐点附近挪不开） */
     function moveBy(el, dx, dy) {
         const p = moveProps(el);
         stepMove(el, p.x, dx);
@@ -216,7 +284,13 @@
     function toggle(force) {
         const on = force === undefined ? !editing() : force;
         if (on && document.body.classList.contains('presenting')) { toast('先退出放映（F）再编辑', false); return; }
-        if (!on) { deselect(); drag = null; }
+        if (!on) {
+            svgInput?.blur();                                      // 待提交的 SVG 编辑先走 blur 提交
+            deselect();
+            drag = null;
+            snapCache = null;
+            guides.innerHTML = '';
+        }
         document.body.classList.toggle(EDITING, on);
         pill.textContent = on ? '✓ 编辑中（E 退出 · Ctrl+S 保存）' : '✏️ 编辑（E）';
         if (on) toast('编辑态：点文字直接改 · 单击选中拖拽挪位 · Ctrl+S 保存', true);
@@ -232,9 +306,50 @@
         select(e.target);
     }, true);
 
+    /* —— SVG 文字受限编辑：contenteditable 对 SVG 无效，覆盖输入框改 textContent。
+       仅限纯文本 <text>；含 tspan 等子元素的多段定位结构一动就塌，引导走对话 —— */
+    let svgInput = null;
+    function svgTextEdit(textEl) {
+        if (textEl.querySelector('*')) { toast('多段 SVG 文本（含 tspan 定位）请走对话修改', false); return; }
+        commitText();
+        select(textEl);
+        const r = textEl.getBoundingClientRect();
+        svgInput = document.createElement('input');
+        svgInput.className = 'deck-editor-ui deck-edit-svg-input';
+        svgInput.value = textEl.textContent;
+        svgInput.style.left = r.left + 'px';
+        svgInput.style.top = r.top + 'px';
+        svgInput.style.width = Math.max(120, r.width + 48) + 'px';
+        svgInput.style.height = Math.max(24, r.height) + 'px';
+        svgInput.style.fontSize = Math.max(12, r.height * 0.72) + 'px';
+        document.body.appendChild(svgInput);
+        svgInput.focus();
+        svgInput.select();
+        let done = false;
+        const finish = keep => {
+            if (done || !svgInput) return;
+            done = true;
+            const val = svgInput.value;
+            svgInput.remove();
+            svgInput = null;
+            if (!keep || val === textEl.textContent) return;
+            pushOp({ type: 'text', el: textEl, prop: 'text', old: textEl.textContent, new: val });
+            textEl.textContent = val;
+        };
+        svgInput.addEventListener('keydown', e => {
+            e.stopPropagation();                                       // 输入框内按键不外溢（播放器/编辑器快捷键均不触发）
+            if (e.key === 'Enter') finish(true);
+            else if (e.key === 'Escape') finish(false);
+        });
+        svgInput.addEventListener('blur', () => finish(true));
+    }
+
     document.addEventListener('dblclick', e => {
         if (!editing()) return;
-        if (e.target.closest('.deck-editor-ui') || skippable(e.target)) return;
+        if (e.target.closest('.deck-editor-ui')) return;
+        const svgText = e.target.closest('text');                  // SVG 文字（HTML 无 text 标签，不误伤）
+        if (svgText) { e.stopPropagation(); e.preventDefault(); svgTextEdit(svgText); return; }
+        if (skippable(e.target)) return;
         e.stopPropagation(); e.preventDefault();
         startText(e.target);
     }, true);
@@ -254,17 +369,28 @@
         if (!drag) return;
         const dx = e.clientX - drag.sx, dy = e.clientY - drag.sy;
         if (!drag.moved && Math.hypot(dx, dy) < 3) return;
-        if (!drag.moved) {                                         // 首次真拖：记录原值供撤销
+        if (!drag.moved) {                                         // 首次真拖：记录原值供撤销 + 建吸附参考系
             drag.moved = true;
             drag.olds = { [drag.pxp]: getIn(drag.el, drag.pxp), [drag.pyp]: getIn(drag.el, drag.pyp) };
+            snapCache = snapCandidates(drag.el);
         }
-        setIn(drag.el, drag.pxp, drag.ox + dx + 'px');
-        setIn(drag.el, drag.pyp, drag.oy + dy + 'px');
+        const r = drag.el.getBoundingClientRect();
+        const hits = [];
+        let sdx = dx, sdy = dy;
+        const hx = snapAxis(drag.el, 'x', r.left + dx);
+        if (hx.shift !== undefined) { sdx = dx + hx.shift; hits.push(hx.guide); }
+        const hy = snapAxis(drag.el, 'y', r.top + dy);
+        if (hy.shift !== undefined) { sdy = dy + hy.shift; hits.push(hy.guide); }
+        showGuides(hits);                                          // 拖拽中参考线常驻，松手即清
+        setIn(drag.el, drag.pxp, drag.ox + sdx + 'px');
+        setIn(drag.el, drag.pyp, drag.oy + sdy + 'px');
         placeBar();
     }, true);
     document.addEventListener('mouseup', () => {
         if (!drag) return;
         const d = drag; drag = null;
+        snapCache = null;
+        guides.innerHTML = '';
         if (!d.moved) return;
         for (const prop of [d.pxp, d.pyp])
             pushOp({ type: 'style', el: d.el, prop, old: d.olds[prop], new: getIn(d.el, prop) });

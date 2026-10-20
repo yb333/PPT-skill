@@ -46,3 +46,16 @@ body.deck-editing section.slide :hover { outline: 1.5px dashed rgba(47, 111, 208
 .deck-edit-toast.show { opacity: 1; transform: none; }
 .deck-edit-toast.ok { border-left: 3px solid #34d399; }
 .deck-edit-toast.bad { border-left: 3px solid #f87171; }
+
+/* —— 对齐参考线（吸附时出现：微调闪现 700ms，拖拽期间常驻）—— */
+.deck-edit-guides { position: fixed; inset: 0; pointer-events: none; z-index: 9999; }
+.deck-edit-guides .vg { width: 1px; background: #ef4444; }
+.deck-edit-guides .hg { height: 1px; background: #ef4444; }
+
+/* —— SVG 文字受限编辑的覆盖输入框 —— */
+.deck-edit-svg-input { border: 2px solid #2f6fd0; border-radius: 4px; padding: 0 6px;
+  background: #fff; color: #1e293b; outline: none; font-weight: 600;
+  font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; }
+
+/* —— 字号 stepper 读数 —— */
+.deck-edit-size { min-width: 26px; text-align: center; font-size: 13px; color: #1e293b; }
