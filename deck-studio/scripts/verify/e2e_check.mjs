@@ -71,6 +71,14 @@ try {
   ok(toc.entries === 0 || (toc.entries >= 2 && toc.entries <= 9), `目录条目数合理（${toc.entries}，合理区间 2–9）`);
   ok(toc.dead.length === 0, `data-toc 无死链${toc.dead.length ? '：指向不存在的 data-label → ' + toc.dead.join(', ') : ''}`);
 
+  // —— 首尾页契约：封面起、结束页终（模板骨架强制；agent 凭记忆重写模板在此拦截）——
+  const ends = await page.evaluate(() => {
+    const s = [...document.querySelectorAll('section.slide')];
+    return { first: s[0]?.dataset.label, last: s[s.length - 1]?.dataset.label };
+  });
+  ok(ends.first === '封面', `第 1 页是封面（实际首页 label=${ends.first}——用 cp 复制 assets/templates/yunshan.html 起步，勿凭记忆重写）`);
+  ok(ends.last === '结束页', `末页是结束页（实际 label=${ends.last}）`);
+
   // —— 浏览模式：逐页翻页，reveal 必须全可见（阅读模式），无白页 ——
   console.log('== 浏览模式逐页翻页 ==');
   for (let i = 1; i < s0.total; i++) {

@@ -66,7 +66,7 @@ description: HTML 演示技能 deck-studio：用户要做 PPT、slides、汇报�
 
 输入：Phase 1 内容 + Phase 2 spec + Phase 3 风格。产出单 HTML 文件，**从模板起步、引擎由工具写入**：
 
-1. **复制模板**：`assets/templates/yunshan.html` 是全页型骨架基准（封面/目录/内容页/卡片网格/表格混排/深蓝金句/结束页 + 引擎标记块占位）。云山体系直接用；其他品牌删品牌资产、换 token，骨架照用。
+1. **复制模板**：`assets/templates/yunshan.html` 是全页型骨架基准（封面/目录/内容页/卡片网格/表格混排/深蓝金句/结束页 + 引擎标记块占位）。**必须用 `cp` 整文件复制起步，严禁凭记忆重写模板或省略内嵌 base64（封面背景/品牌 logo 是大体积内嵌资产，重写必丢——丢了封面就是白板，e2e 门禁强制封面起/结束页终）**。云山体系直接用；其他品牌删品牌资产、换 token，骨架照用。
 2. **填内容**：按 `references/page-types.md` 选型/增删 section（占位说明即"这栏该写什么"）；排版对照 `references/layout.md` 刻度；图表自绘读 `references/svg-diagrams.md`（inline SVG，禁 emoji/ASCII 图）；文案对照 `references/copywriting.md`；封面/结束页只改填写区文字，不重画。
 3. **申报动画**：默认零动画；需要时按 `references/animation.md` 机制速查表，在数据区声明 `DECK_AUTO` / `DECK_STEPS` / `DECK_COUNTUP` / `DECK_AMBIENT`（坐标 = 页 svg viewBox 体系）。
 4. **写引擎**：不手写引擎——`node <skill>/scripts/sync-engine.mjs <deck.html>` 把 `═══ DECK ENGINE ═══` 标记块写入。唯一源是 `assets/effects/` 五件套，**严禁手改块内代码**。
@@ -95,7 +95,7 @@ node <skill>/scripts/verify/shot.mjs <deck.html> <data-label> /tmp/page.jpg   # 
 ## Phase 7: 交付
 
 1. 清理 `.claude-design/slide-previews/` 等临时产物。
-2. 交付 HTML（`open <file>.html` 或发文件路径），附导航说明（浏览=滚轮长页滚动、←/→ 页级定位、F 放映（→/单击逐条推进）、P 聚光灯、左上角 ☰ 页面目录）。
+2. 交付 HTML（`open <file>.html` 或发文件路径），附导航说明（浏览=滚轮长页滚动、←/→ 页级定位、F 放映（→/单击逐条推进）、P 聚光灯、左上角 ☰ 页面目录；**人手微调=node <skill>/scripts/serve/deck-serve.mjs <deck.html> 后按 E——直接双击打开的 deck 是纯观看，没有编辑器，务必把这条连同命令一起告知用户**）。
 3. 用户需要 .pptx 时，deck 内 **⤓ 按钮一键下载可编辑 PPTX**（文字/形状/表格对象可直接编辑；deck-bar 含 #pptxBtn 即有此能力）。导出后自检：pptx 页数 == deck 页数；用 WPS/PowerPoint 打开抽查重点页。
 
 ---
