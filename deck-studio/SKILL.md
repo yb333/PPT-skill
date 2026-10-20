@@ -125,7 +125,7 @@ node install.mjs --check     # 只查环境（Node/浏览器/playwright-core/Pyt
 node install.mjs --pack      # 打离线包（vendor playwright-core，整目录拷去内网后 node install.mjs）
 ```
 
-安装脚本自动完成：环境检测（Node ≥18；**Chrome 为首选浏览器**，机器无 Chrome 时自动回退 Edge/Chromium——win 内网常见形态零配置，也可用 `AICO_BROWSER_EXECUTABLE` 显式指定）、vendor playwright-core 进技能目录（离线跑门禁）、安装指纹 `_install_meta.json`。win 双击 `install.bat`（自动找 Node、跑完暂停）。装完重启 opencode 即被发现。
+安装脚本自动完成：环境检测（Node ≥18；**Chrome 为首选浏览器**，机器无 Chrome 时自动回退 Edge/Chromium——win 内网常见形态零配置，也可用 `AICO_BROWSER_EXECUTABLE` 显式指定）、vendor playwright-core 进技能目录（**已随仓 vendor 在 `deck-studio/node_modules/`，克隆即完整，离线跑门禁**）、安装指纹 `_install_meta.json`。win 双击 `install.bat`（自动找 Node、跑完暂停）。装完重启 opencode 即被发现。
 
 ## 参考文档索引（按需读取，不要一次全读）
 

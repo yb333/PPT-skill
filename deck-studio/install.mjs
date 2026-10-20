@@ -58,7 +58,7 @@ function envReport() {
     const found = browserCandidates().filter(existsSync);
     console.log(`  浏览器    ${found.length ? '✓ ' + found.join('  ') : '✗ 未发现 Chrome/Edge——门禁与放映验证不可用；可装 Chrome（首选）或用 AICO_BROWSER_EXECUTABLE 指定'}`);
     const vsrc = vendorSource();
-    console.log(`  playwright-core ${vsrc ? '✓ ' + vsrc : '✗ 未找到——门禁（溢出/e2e）将不可用，deck 创作仍可用；外网跑 node install.mjs --pack 可带离线 vendor'}`);
+    console.log(`  playwright-core ${vsrc ? '✓ ' + vsrc : '✗ 未找到——完整克隆本仓应自带（deck-studio/node_modules/）；若确缺，在有网机器 npm install playwright-core 或跑 --pack'}`);
     const py = pythonCmd();
     console.log(`  Python    ${py ? '✓ ' + py : '○ 未装（可选，仅命令行 PPTX 转换用；deck 内 ⤓ 按钮导出不依赖）'}`);
     return { nodeOk, browsers: found, vsrc };
