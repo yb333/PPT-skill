@@ -2,7 +2,7 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { loadChromium, chromiumLaunchOptions } from '../verify/load-playwright.mjs';
+import { loadChromium, launchChromium } from '../verify/load-playwright.mjs';
 import { deckFileUrl } from './path-url.mjs';
 import { collectEditableScene, prepareEditableCapture, restoreEditableCapture } from './editable-scene.mjs';
 import { prepareExportPage } from './export-ready.mjs';
@@ -12,7 +12,7 @@ export async function extractEditable(input, output, { scale = 2, referenceDir }
   await mkdir(output, { recursive: true });
   if (referenceDir) await mkdir(referenceDir, { recursive: true });
   const chromium = await loadChromium();
-  const browser = await chromium.launch(chromiumLaunchOptions());
+  const browser = await launchChromium(chromium);
   try {
     const page = await browser.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: scale });
     await page.goto(deckFileUrl(resolve(input)), { waitUntil: 'load', timeout: 180000 });

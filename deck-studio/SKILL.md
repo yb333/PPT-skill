@@ -112,6 +112,21 @@ node <skill>/scripts/serve/deck-serve.mjs <deck.html> [--port 4173]
 
 **分工边界**（对用户说明白）：人手适合改字、换词、调色、挪几像素、改数据区动画参数；**增删页、挪章、画新图、动画序列设计仍走对话**——结构变化牵动目录/eyebrow/页码联动，编辑态不提供入口。编辑器由服务注入，deck 文件保持干净（直接双击打开=纯观看）；svg 内部与引擎标记块在编辑态不可改。人手改完 plan.md 随手同步（process.md 纪律）。
 
+---
+
+## 一键安装（opencode / 内网）
+
+技能本体即安装包：`deck-studio/` 目录整个拷走就能装（研发仓的 docs/tests/dev 件不在目录内，天然不带）。
+
+```bash
+node install.mjs             # 全局安装 → ~/.config/opencode/skills/deck-studio
+node install.mjs --local     # 项目级 → <cwd>/.opencode/skills/deck-studio
+node install.mjs --check     # 只查环境（Node/浏览器/playwright-core/Python）
+node install.mjs --pack      # 打离线包（vendor playwright-core，整目录拷去内网后 node install.mjs）
+```
+
+安装脚本自动完成：环境检测（Node ≥18；**Chrome 为首选浏览器**，机器无 Chrome 时自动回退 Edge/Chromium——win 内网常见形态零配置，也可用 `AICO_BROWSER_EXECUTABLE` 显式指定）、vendor playwright-core 进技能目录（离线跑门禁）、安装指纹 `_install_meta.json`。win 双击 `install.bat`（自动找 Node、跑完暂停）。装完重启 opencode 即被发现。
+
 ## 参考文档索引（按需读取，不要一次全读）
 
 | 文件 | 何时读 |

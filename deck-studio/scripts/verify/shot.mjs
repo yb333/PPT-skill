@@ -14,7 +14,7 @@
 
 import { existsSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
-import { loadChromium, chromiumLaunchOptions } from './load-playwright.mjs';
+import { loadChromium, launchChromium } from './load-playwright.mjs';
 
 const [deckFile, label, outFile] = process.argv.slice(2);
 if (!deckFile || !label || !outFile) { console.error('用法: node shot.mjs <deck.html> <label> <out.jpg>'); process.exit(2); }
@@ -25,7 +25,7 @@ try { chromium = await loadChromium(); }
 catch (error) { console.error(error.message); process.exit(2); }
 let browser, exitCode = 0;
 try {
-  browser = await chromium.launch(chromiumLaunchOptions());
+  browser = await launchChromium(chromium);
   const page = await browser.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 });
   await page.goto(pathToFileURL(deckFile).href, { waitUntil: 'load', timeout: 180000 });
   await page.waitForFunction(() => document.querySelectorAll('section.slide').length > 0, { timeout: 60000 });

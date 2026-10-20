@@ -10,7 +10,7 @@
 
 import { existsSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
-import { loadChromium, chromiumLaunchOptions } from './load-playwright.mjs';
+import { loadChromium, launchChromium } from './load-playwright.mjs';
 
 const [deckFile] = process.argv.slice(2);
 if (!deckFile) { console.error('用法: node e2e_check.mjs <deck.html>'); process.exit(2); }
@@ -23,7 +23,7 @@ let chromium;
 try { chromium = await loadChromium(); }
 catch (error) { console.error(error.message); process.exit(2); }
 
-const browser = await chromium.launch(chromiumLaunchOptions());
+const browser = await launchChromium(chromium);
 const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
 const errors = [];
 page.on('pageerror', e => errors.push(e.message + '  @' + (e.stack || '').split('\n').slice(1, 2).join(' ').trim()));

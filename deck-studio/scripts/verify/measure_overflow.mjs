@@ -26,7 +26,7 @@
 
 import { existsSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
-import { loadChromium, chromiumLaunchOptions } from './load-playwright.mjs';
+import { loadChromium, launchChromium } from './load-playwright.mjs';
 
 const TRUNC = 36;        // 元素文本摘要统一截断长度
 const NESTED_FAIL_PX = 6; // 内层 overflow:hidden 裁切超过此值判失败（2px 为舍入容差，刻意省略号截断等微小裁切不误报）
@@ -41,7 +41,7 @@ try { chromium = await loadChromium(); }
 catch (error) { console.error(error.message); process.exit(2); }
 let browser, exitCode = 0;
 try {
-  browser = await chromium.launch(chromiumLaunchOptions());
+  browser = await launchChromium(chromium);
   const page = await browser.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 });
   await page.goto(pathToFileURL(deckFile).href, { waitUntil: 'load', timeout: 180000 }); // 单文件 deck 很大，放宽超时
   await page.waitForFunction(() => document.querySelectorAll('section.slide').length > 0, { timeout: 60000 });

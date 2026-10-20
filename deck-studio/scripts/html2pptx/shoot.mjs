@@ -7,7 +7,7 @@
 // 顺序写入 manifest（扁平有序），build_pptx 按序一页一图。
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { loadChromium, chromiumLaunchOptions } from '../verify/load-playwright.mjs';
+import { loadChromium, launchChromium } from '../verify/load-playwright.mjs';
 import { deckFileUrl } from './path-url.mjs';
 import { prepareExportPage } from './export-ready.mjs';
 
@@ -25,7 +25,7 @@ const quality = Number(qualArg) || 92;
 const W = 1920, H = 1080;               // 课件原生分辨率（每页 .slide-canvas）
 mkdirSync(outDir, { recursive: true });
 
-const browser = await chromium.launch(chromiumLaunchOptions());
+const browser = await launchChromium(chromium);
 try {
   const page = await browser.newPage({ viewport: { width: W, height: H }, deviceScaleFactor: scale });
   console.error('载入 HTML（大文件，请稍候）…');
