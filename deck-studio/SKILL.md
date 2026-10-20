@@ -96,13 +96,21 @@ node <skill>/scripts/verify/shot.mjs <deck.html> <data-label> /tmp/page.jpg   # 
 
 1. 清理 `.claude-design/slide-previews/` 等临时产物。
 2. 交付 HTML（`open <file>.html` 或发文件路径），附导航说明（浏览=滚轮长页滚动、←/→ 页级定位、F 放映（→/单击逐条推进）、P 聚光灯、左上角 ☰ 页面目录）。
-3. 用户需要 .pptx 时导出（宪法 2：快照投影，无动画）：
+3. 用户需要 .pptx 时，deck 内 **⤓ 按钮一键下载可编辑 PPTX**（文字/形状/表格对象可直接编辑；deck-bar 含 #pptxBtn 即有此能力）。导出后自检：pptx 页数 == deck 页数；用 WPS/PowerPoint 打开抽查重点页。
+
+---
+
+## 用户人手微调（deck-serve：浏览器内所见即所得）
+
+交付后的文字/颜色/位置微调，用户可以不经过对话自己动手（win/mac 通用，需 Node ≥18；溢出门禁需 playwright-core + 本机 Chrome/Edge）：
 
 ```bash
-python3 <skill>/scripts/html2pptx/convert.py <deck.html> <out.pptx>   # image 模式
+node <skill>/scripts/serve/deck-serve.mjs <deck.html> [--port 4173]
 ```
 
-导出后自检：pptx 页数 == deck 页数；用 WPS/PowerPoint 打开抽查重点页。
+打开打印出的 `http://localhost:4173/?edit=1`（或页内按 E）进入编辑态：**点文字直接改；单击选中、拖拽挪位、方向键 1px 微调（Shift=10px）；浮动工具条改主题色/刻度字号/加粗/对齐；Ctrl+Z 撤销；Ctrl+S 保存**=写回原文件（旧版自动留 `<deck>.bak`）并自动跑门禁——引擎块校验前置拦截（改了禁改区直接拒收），溢出/密度门禁后台跑完经 toast 推送，保存后页面自动刷新。
+
+**分工边界**（对用户说明白）：人手适合改字、换词、调色、挪几像素、改数据区动画参数；**增删页、挪章、画新图、动画序列设计仍走对话**——结构变化牵动目录/eyebrow/页码联动，编辑态不提供入口。编辑器由服务注入，deck 文件保持干净（直接双击打开=纯观看）；svg 内部与引擎标记块在编辑态不可改。人手改完 plan.md 随手同步（process.md 纪律）。
 
 ## 参考文档索引（按需读取，不要一次全读）
 
@@ -118,7 +126,7 @@ python3 <skill>/scripts/html2pptx/convert.py <deck.html> <out.pptx>   # image �
 | `references/animation.md` | Phase 2/4 —— 动画申报制：流线语言法则、机制速查表、四类声明格式、节奏依据 |
 | `assets/effects/` | Phase 4 —— 引擎唯一源六件套（player.js 核心 / stepfx.js 步进 / auto.js 流线动线 / countup.js 数字滚动 / ambient.js 常驻流转 / exporter.js 一键导出 + effects.css）：标记块由 sync-engine 写入，**严禁手改**；作者只写数据声明。deck-bar 含 #pptxBtn 时按 P 一键导出快照 PPTX |
 | `assets/templates/yunshan.html` | Phase 4 —— 品牌模板与全页型骨架基准（封面/目录/内容页/卡片网格/表格混排/深蓝金句/结束页）：复制后改填写区、按页型增删 section、替换占位文案 |
-| `scripts/` | Phase 4/5/7 —— sync-engine（引擎写入/校验）、verify 四件套（溢出/截图/e2e/目检）、html2pptx（导出） |
+| `scripts/` | Phase 4/5/7 —— sync-engine（引擎写入/校验）、verify 四件套（溢出/截图/e2e/目检）、html2pptx（导出）、serve/deck-serve（人手微调服务：编辑态注入 + 保存写回 + 门禁联动） |
 | `references/copywriting.md` | Phase 1/2/4 —— 文案规范（中文、标题句式、数字） |
 
 ## 常见故障

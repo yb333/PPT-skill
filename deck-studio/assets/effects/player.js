@@ -18,7 +18,7 @@
    混合层（stepfx.js/auto.js/ambient.js）依赖：window.__deck、syncChrome
    内派发 deckpage 事件、data-label 页标识。本文件声明版本号供门禁断言。
    ===================================================================== */
-window.DECK_ENGINE_VERSION = '1.6.0';
+window.DECK_ENGINE_VERSION = '1.6.1';
 
 class DeckPlayer {
     constructor() {
@@ -80,6 +80,7 @@ class DeckPlayer {
     buildThumbs() {
         const wrap = document.getElementById('deckThumbs');
         if (!wrap) { this.thumbs = []; return; }
+        wrap.innerHTML = '';                                 // 幂等：deck-serve 保存往返可能带回克隆残留，重建前先清空
         this.thumbs = this.slides.map((s, i) => {
             const item = document.createElement('div');
             item.className = 'thumb-item';
