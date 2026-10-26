@@ -85,6 +85,71 @@ busy .finally 兜底、序列绑定页号防串页、CSS 副本漂移也要标�
 vendor 导出工具 html2pptx 自根 scripts/ 收编进 skill（导出是承诺功能，必须随包分发）；测试夹具移至
 仓根 tests/（非成品内容）；skill 成品内不保留研发史叙事与本地路径指针。
 
+### D10 editable 导出：img data-URL 直通，照片不再重拍为 2x PNG（2026-10-20）
+
+指标编码链路 deck 实测暴露：云山照片封面经 elementPng（foreignObject + 2x canvas → PNG）重拍后单图 5MB，
+4 页 deck 导出 11.6MB。补丁：exporter.js elementPng 对 `<img>` 且 src 为 `data:image/(jpeg|png);base64`
+且无 filter/transform/opacity 的元素直通原始字节（返回 {blob, ext}），媒体名按实际格式 `.jpg`/`.png`；
+消费端兼容旧 Blob 返回。效果：同 deck 导出 1.6MB。另记录 editable-scene.mjs 两个未修坑（deck 层规避）：
+SVG `opacity` 属性不并入 fill alpha；`opacity<1` 触发堆叠上下文使背景 emit 升到顶层——半透明泳道导出
+成顶层实心块。规避纪律：SVG 不用 opacity 属性（预混色），背景矩形在 defs 后最先绘制。
+
+### D11 deck 固定件预制化：init-deck 脚手架（2026-10-20）
+
+指标编码链路 deck 全程暴露"固定件手工组装"事故五起（漏 chrome、引擎块吞作者数据区、pptxBtn 样式
+静默丢失、封面自建后返工云山模板、document.title 残留）。定案：**deck = 固定件 + 内容件**，固定件
+（头部 CSS/chrome/封面/结束页/引擎块/作者数据区/document.title）一律脚本预制，模型只产内容 section；
+不违背 D2——内容页仍人机共建，预制的是非内容件。落地 `scripts/init-deck.mjs`：
+`node init-deck.mjs <out> --title … [--date] [--template yunshan|none] [--sections N]`，产出即含
+正确 chrome 与引擎标记块的骨架，自动跑 sync-engine；云山为缺省模板（内部汇报），none 为通用蓝板；
+云山封面/结束页大图压缩后内嵌（143KB/116KB）。模板碎片沉淀于 `assets/templates/scaffold/`。
+Level 2（chrome 纳入 sync-engine 标记块管理，存量 deck 一条命令升级 chrome）另议。
+同批导出修复：editable-scene 复杂元素光栅化时裸文本节点不隐藏 → 卡片标题/总结条文字在 PPTX 里
+双份（deck 层规避：单侧边框改嵌套色条 div）；path 折线分解错位（规避：折线拆 line）。
+**遗留**：导出保真未进门禁（export_check.mjs 提案），A2/A3/A4 引擎坑未修。
+
+### D12 编辑能力进 deck：内置内核 + 三通道保存（2026-10-20）
+
+用户核心诉求：双击打开 HTML → ✎/E 进入编辑 → 两分钟改完字 → Ctrl/S 保存（浏览器弹替换原文件）——
+细微修改不该绕道对话。浏览器安全模型不允许 file:// 页面静默写自身，故保存为三通道按能力自动分发：
+① deck-serve 在线（bootstrap 注入 `__DECK_SERVE`）→ POST 写回原文件 + 保存门禁 + SSE toast（power path）；
+② Chromium FS Access（file:// 下 showSaveFilePicker 实测可用，isSecureContext=true）→ 系统另存对话框
+   替换原文件，无服务；③ 其他 → 下载编辑后 HTML。导出 PPTX 永远基于当前编辑态，与保存解耦。
+落地：编辑器同源化——serve/editor.js 升格为 `assets/effects/editor.js`（唯一源），sync-engine 内嵌进
+deck 引擎块（旧 deck 由 deck-serve 兜底注入），editor.css 并入 editor.js 自注入（随 [data-deck-editor]
+序列化剥除）；deck-serve 对内嵌 deck 只注入 bootstrap，新增 `--open`。按键修正：E 在观景态即可进入
+编辑（原实现 E 只能退出，与"按 E 进入"的承诺不符）。验证：channel_test 三通道 11 断言全过（含序列化
+产物引擎块完好、无编辑器 UI 残留）；期间服务端拒收了一次旧引擎块写回——引擎纪律按设计工作。
+定位纪律：编辑态=轻改（文字/位置/颜色），结构性修改仍走对话；deck-serve 仍是唯一跑完整门禁的保存
+通道，客户端保存附轻量溢出提示（后续项）。
+
+**D12 实测追加（同日）**：Mac 触控板实测三修——① 按住即拖（不再要求先选中），流式元素首次拖动自动转为 slide 内绝对定位（PPT 手感，逐属性入撤销栈）；② 字号刻度向下扩展至 9–12px（覆盖 SVG 小字）；③ 点击空白即提交并取消选中。过程中揪出并修复一个更深的缺陷：mousedown preventDefault 会连带吞掉后续 click/dblclick（点击选中与双击改字全哑），改为拖拽起手后 userSelect:none 压原生选字、mousedown 只 stopPropagation；双击改字改由 click detail===2 触发。channel/ux 测试 21 断言全过。
+
+### D13 导出保真门禁（第五件套）+ 两档能力分级（2026-10-21）
+
+**export_check.mjs + export_assert.py**：对 deck 实际触发 ⤓ 导出，对 PPTX 做六断言——①页数平价
+②文本存在性（去空白顺序拼接比对，容忍导出器按渲染行拆分）③文本去重（出现次数不超 deck 期望，
+拦"复杂元素光栅化带字+可编辑文字双份"）④图片数量配额（deck img+3，拦"复杂背景整块光栅化"）
+⑤媒体体积（单件 <2MB，拦照片重拍巨图）⑥遮挡启发式（--full：z≥3 的大形状盖住 ≥10 条**z 更低**
+文字 → 拦"半透明背景实心化+升顶盖顶"；60% 整页盖顶并入同断言）。标定：本 deck 全过零误报；
+五个历史 bug 合成变体（重复/整页盖/媒体巨图/文字丢失/中型盖字）逐个精准拦截。运行成本秒级
+（--fast）到半分钟（--full）；依赖 python-pptx（清单内）。Phase 5 升为五件套，交付前必跑。
+
+**两档能力分级**（取代多级梯队设想）：面向的模型/agent 能力各异，档位判定机械化——
+`scripts/probe.mjs`（node/playwright/python/soffice 探测 + 宿主视觉声明 AICO_VISION/--vision），
+输出 vision/novision 两档（规则见 references/tiers.md）。novision：机器门禁照跑；禁目检（显式
+跳过并告知用户）；复杂 SVG 自绘降级简单版式并标注待补。分级只作用于内容件与验收步骤——固定件
+（D11 脚手架/引擎/编辑器）脚本保证，任何档位正确。低级模型不在支持范围（用户定案）。
+参数化 SVG 片段库为 novision 档未来方向：不预铺量，遇真实场景收一个。
+
+**D13 实施追加（同日）**：D10 遗留四坑中三个已修——A1（elementPng background 类克隆
+color:transparent 隐藏裸文本）、A2（SVG opacity/fill-opacity 并入 fill/stroke/text alpha，四分支）、
+A4（freeform 坐标归一化到声明的 path 空间——units 不一致导致折线放大甩出画面，已建
+tests/fixture-svg-opacity.html 稳定复现）。回归资产：tests/export_gate_variants.py（五类历史 bug
+合成变体，逐一断言拦截）+ fixture + channel/ux 测试。剩余：A3 排序键（A2 修复后实际伤害大减，
+半透明层升顶视觉可接受，暂不动）、Level 2 chrome 纳管（触发条件：同一旧 deck 第二次需要 chrome
+升级）、参数化 SVG 片段库（按需沉淀）。
+
 ## 待定项
 
 - git 远端备份是否配置。

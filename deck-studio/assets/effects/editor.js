@@ -1,5 +1,5 @@
 /* =====================================================================
-   deck-studio · editor.js — deck-serve 注入的所见即所得编辑态（不进 deck 文件）
+   deck-studio · editor.js — 所见即所得编辑内核（唯一源：sync 内嵌进 deck，deck-serve 兜底注入旧 deck，两处共用）
    ---------------------------------------------------------------------
    交互（对照 PPT）：按 E 进出编辑态；点文字直接改（plaintext-only 就地编辑）；
    单击选中（蓝框）· 拖拽挪位 · 方向键 1px 微调（Shift=10px，绝对定位改 left/top，
@@ -14,9 +14,77 @@
     if (window.__deckEditor) return;
     window.__deckEditor = true;
 
+    /* —— 编辑态视觉层：自带样式（序列化时随 [data-deck-editor] 剥除）—— */
+    const editorStyle = document.createElement('style');
+    editorStyle.setAttribute('data-deck-editor', '1');
+    editorStyle.textContent = `
+/* —— 编辑态：悬停可选中提示 + 选中框；编辑中隐藏 deck-bar 防误触放映 —— */
+body.deck-editing { cursor: default; }
+body.deck-editing .deck-bar { visibility: hidden; }
+body.deck-editing section.slide :hover { outline: 1.5px dashed rgba(47, 111, 208, .45); outline-offset: 2px; }
+.deck-edit-sel { outline: 2px solid #2f6fd0 !important; outline-offset: 2px; cursor: move; }
+.deck-edit-sel[contenteditable] { cursor: text; outline-style: solid; }
+
+/* —— 编辑器 UI（deck-editor-ui：序列化时剥除）—— */
+.deck-editor-ui { position: fixed; z-index: 10000; font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; transition: opacity .25s ease; }
+
+/* —— 放映态：编辑 UI 全部退场 —— */
+body.presenting .deck-editor-ui { opacity: 0; pointer-events: none; }
+
+.deck-edit-pill {
+    left: 20px; bottom: 20px; padding: 8px 16px; border: 1px solid rgba(255, 255, 255, .65);
+    border-radius: 999px; background: rgba(22, 41, 74, .88); color: #fff;
+    font-size: 13px; letter-spacing: .04em; cursor: pointer;
+    box-shadow: 0 6px 24px rgba(15, 23, 42, .25);
+    backdrop-filter: saturate(180%) blur(12px);
+}
+.deck-edit-pill:hover { background: rgba(47, 111, 208, .92); }
+
+.deck-edit-bar {
+    display: flex; align-items: center; gap: 6px; padding: 6px 8px;
+    border: 1px solid rgba(255, 255, 255, .65); border-radius: 10px;
+    background: rgba(248, 250, 252, .92); box-shadow: 0 8px 28px rgba(15, 23, 42, .22);
+    backdrop-filter: saturate(180%) blur(12px);
+}
+.deck-edit-bar[hidden] { display: none; }
+.deck-edit-bar button, .deck-edit-bar select {
+    border: 1px solid #d5d9de; border-radius: 6px; background: #fff; color: #1e293b;
+    font-size: 13px; line-height: 1; padding: 5px 8px; cursor: pointer;
+}
+.deck-edit-bar button:hover { border-color: #2f6fd0; color: #2f6fd0; }
+.deck-edit-swatch { width: 22px; height: 22px; padding: 0 !important; }
+.deck-edit-swatch:hover { transform: scale(1.12); }
+
+.deck-edit-toast {
+    right: 20px; bottom: 20px; max-width: 460px; padding: 10px 16px;
+    border-radius: 10px; font-size: 13px; line-height: 1.5; color: #fff;
+    background: rgba(22, 41, 74, .92); box-shadow: 0 8px 28px rgba(15, 23, 42, .3);
+    opacity: 0; transform: translateY(8px); transition: opacity .25s ease, transform .25s ease;
+    pointer-events: none; white-space: pre-wrap;
+}
+.deck-edit-toast.show { opacity: 1; transform: none; }
+.deck-edit-toast.ok { border-left: 3px solid #34d399; }
+.deck-edit-toast.bad { border-left: 3px solid #f87171; }
+
+/* —— 对齐参考线（吸附时出现：微调闪现 700ms，拖拽期间常驻）—— */
+.deck-edit-guides { position: fixed; inset: 0; pointer-events: none; z-index: 9999; }
+.deck-edit-guides .vg { width: 1px; background: #ef4444; }
+.deck-edit-guides .hg { height: 1px; background: #ef4444; }
+
+/* —— SVG 文字受限编辑的覆盖输入框 —— */
+.deck-edit-svg-input { border: 2px solid #2f6fd0; border-radius: 4px; padding: 0 6px;
+  background: #fff; color: #1e293b; outline: none; font-weight: 600;
+  font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; }
+
+/* —— 字号 stepper 读数 —— */
+.deck-edit-size { min-width: 26px; text-align: center; font-size: 13px; color: #1e293b; }
+    `;
+    document.head.appendChild(editorStyle);
+
+
     const EDITING = 'deck-editing', SEL = 'deck-edit-sel';
     const SKIP = '.deck-bar, .deck-sidebar, .player-hint, .deck-editor-ui, svg, svg *';
-    const SIZES = [14, 15, 17, 18, 19, 21, 24, 25, 32, 40, 66, 88];
+    const SIZES = [9, 10, 11, 12, 14, 15, 17, 18, 19, 21, 24, 25, 32, 40, 48, 56, 66, 88];
     const SWATCH_NAMES = ['--ys-navy', '--ys-blue', '--ys-blue-lt', '--text', '--text-sub', '--text-faint'];
     const FALLBACK = ['#16294a', '#2f6fd0', '#63b3ff', '#1e293b', '#64748b', '#94a3b8'];
 
@@ -230,6 +298,30 @@
             ? { x: 'left', y: 'top' }
             : { x: 'marginLeft', y: 'marginTop' };
     };
+    /* —— 自由定位：流式元素首次拖动时转为 slide 内绝对定位（PPT 手感），逐属性可撤销 —— */
+    function pinToSlide(el) {
+        const slide = el.closest('section.slide');
+        if (!slide) return;
+        const s = slide.getBoundingClientRect();
+        const r = el.getBoundingClientRect();
+        const targetL = r.left - s.left, targetT = r.top - s.top;
+        const touched = ['position', 'left', 'top', 'width', 'height', 'margin'];
+        const olds = {};
+        for (const p of touched) olds[p] = getIn(el, p);
+        el.style.position = 'absolute';
+        el.style.margin = '0';
+        el.style.left = Math.round(targetL) + 'px';
+        el.style.top = Math.round(targetT) + 'px';
+        el.style.width = Math.round(r.width) + 'px';
+        el.style.height = Math.round(r.height) + 'px';
+        const r2 = el.getBoundingClientRect();                     // 偏移父级非 slide 时的一次校正
+        el.style.left = Math.round(targetL + (s.left + targetL - r2.left)) + 'px';
+        el.style.top = Math.round(targetT + (s.top + targetT - r2.top)) + 'px';
+        for (const p of touched) {
+            const now = getIn(el, p);
+            if (now !== olds[p]) pushOp({ type: 'style', el, prop: p, old: olds[p], new: now });
+        }
+    }
     const px = v => Math.round(parseFloat(v) || 0);
     const curProp = (el, prop) => px(getIn(el, prop) || getComputedStyle(el)[prop]);
     /* 方向键=1px 精调不吸附（PPT 模型：吸附只在拖拽时生效，否则对齐点附近挪不开） */
@@ -267,10 +359,20 @@
         if (body) body.className = 'browse';
         return '<!DOCTYPE html>\n' + root.outerHTML;
     }
-    function save() {
+    const docName = () => {
+        try { return decodeURIComponent(location.pathname.split('/').pop()) || 'deck.html'; }
+        catch { return 'deck.html'; }
+    };
+    function save() {                                   // 三通道：deck-serve 写回 / Chromium 直接写回原文件 / 下载
         commitText();
+        if (window.__DECK_SERVE) return saveServe();
+        if (window.showSaveFilePicker) return saveFsAccess();
+        saveDownload();
+    }
+    function saveServe() {
+        initSSE();
         toast('保存中…', true);
-        fetch('/__deck/save', {
+        fetch(window.__DECK_SERVE.save, {
             method: 'POST',
             headers: { 'content-type': 'application/json' },
             body: JSON.stringify({ html: serializePristine() }),
@@ -278,6 +380,38 @@
             if (!res.ok) toast('保存被拒：' + res.error, false);
             else toast('已写回 · ' + (res.note || ''), true);      // reload 事件通常先到，刷新后由 SSE 补溢出结果
         }).catch(e => toast('保存失败：' + e.message, false));
+    }
+    async function saveFsAccess() {                     // Chromium：系统另存对话框（替换原文件），无需服务
+        try {
+            const handle = await window.showSaveFilePicker({
+                suggestedName: docName(),
+                types: [{ description: 'deck HTML', accept: { 'text/html': ['.html'] } }],
+            });
+            const w = await handle.createWritable();
+            await w.write(serializePristine());
+            await w.close();
+            const hint = overflowHint();
+            toast('已保存到原文件 · 结构性修改（增删页/改图）请走对话' + (hint ? '。⚠ ' + hint : ''), !hint);
+        } catch (e) {
+            if (e && e.name === 'AbortError') { toast('已取消保存'); return; }
+            toast('此浏览器不支持直接写回，已改为下载', false);
+            saveDownload();
+        }
+    }
+    function overflowHint() {                          // 客户端通道无完整门禁：轻量自检兜住无声裁切
+        const slides = [...document.querySelectorAll('section.slide')];
+        const bad = slides.findIndex(sl => sl.scrollHeight > sl.clientHeight + 6 || sl.scrollWidth > sl.clientWidth + 6);
+        return bad < 0 ? '' : `第 ${bad + 1} 页内容可能超出画布——建议回 deck-serve 保存以运行完整门禁`;
+    }
+    function saveDownload() {                           // 兜底：下载编辑后的 HTML（替换原文件；演示可直接 ⤓ 导出 PPTX）
+        const blob = new Blob([serializePristine()], { type: 'text/html' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = docName();
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+        const hint = overflowHint();
+        toast('已下载编辑后的 HTML：请替换原文件（仅演示用可改为 ⤓ 导出 PPTX）' + (hint ? '。⚠ ' + hint : ''), !hint);
     }
 
     /* —— 模式切换 —— */
@@ -300,10 +434,11 @@
     document.addEventListener('click', e => {
         if (!editing()) return;
         if (e.target.closest('.deck-editor-ui')) return;           // 编辑器 UI 自身正常工作
-        if (skippable(e.target)) return;                           // 引擎 chrome 正常工作
-        e.stopPropagation(); e.preventDefault();                   // 页面内容：编辑接管
         commitText();
+        if (skippable(e.target)) { deselect(); return; }           // 点空白/引擎 chrome：提交并取消选中
+        e.stopPropagation(); e.preventDefault();                   // 页面内容：编辑接管
         select(e.target);
+        if (e.detail === 2) startText(e.target);                   // 双击 = 就地改字（mousedown 已被接管，detail 原样保留）
     }, true);
 
     /* —— SVG 文字受限编辑：contenteditable 对 SVG 无效，覆盖输入框改 textContent。
@@ -357,21 +492,27 @@
     document.addEventListener('mousedown', e => {
         if (!editing() || typing() || e.button !== 0) return;
         if (e.target.closest('.deck-editor-ui') || skippable(e.target)) return;
-        const el = selected && (e.target === selected || selected.contains(e.target)) ? selected : null;
-        if (!el) return;
+        commitText();
+        const el = (selected && (e.target === selected || selected.contains(e.target))) ? selected : e.target;   // 按住即拖，无需先选中
         const p = moveProps(el);
         drag = { el, pxp: p.x, pyp: p.y, sx: e.clientX, sy: e.clientY,
                  ox: curProp(el, p.x), oy: curProp(el, p.y),
                  moved: false, olds: null };
-        e.stopPropagation(); e.preventDefault();
+        e.stopPropagation();                                       // 阻断播放器等监听；不可 preventDefault——会吞 click/dblclick
     }, true);
     document.addEventListener('mousemove', e => {
         if (!drag) return;
         const dx = e.clientX - drag.sx, dy = e.clientY - drag.sy;
         if (!drag.moved && Math.hypot(dx, dy) < 3) return;
-        if (!drag.moved) {                                         // 首次真拖：记录原值供撤销 + 建吸附参考系
+        if (!drag.moved) {                                         // 首次真拖：流式元素先转为自由定位，再记录原值供撤销
             drag.moved = true;
+            const pos = getComputedStyle(drag.el).position;
+            if (pos !== 'absolute' && pos !== 'fixed') pinToSlide(drag.el);
+            const p2 = moveProps(drag.el);
+            drag.pxp = p2.x; drag.pyp = p2.y;
+            drag.ox = curProp(drag.el, drag.pxp); drag.oy = curProp(drag.el, drag.pyp);
             drag.olds = { [drag.pxp]: getIn(drag.el, drag.pxp), [drag.pyp]: getIn(drag.el, drag.pyp) };
+            document.body.style.userSelect = 'none';               // 拖拽期间压住原生选字
             snapCache = snapCandidates(drag.el);
         }
         const r = drag.el.getBoundingClientRect();
@@ -390,6 +531,7 @@
         if (!drag) return;
         const d = drag; drag = null;
         snapCache = null;
+        document.body.style.userSelect = '';
         guides.innerHTML = '';
         if (!d.moved) return;
         for (const prop of [d.pxp, d.pyp])
@@ -397,7 +539,6 @@
     }, true);
 
     document.addEventListener('keydown', e => {
-        if (!editing()) return;
         const k = e.key;
         const saveKeys = (e.ctrlKey || e.metaKey) && (k === 's' || k === 'S');
         if (typing()) {
@@ -406,9 +547,10 @@
             e.stopPropagation();                                       // 其余按键只属于文字（并屏蔽播放器快捷键）
             return;
         }
+        if (k === 'e' || k === 'E') { e.stopPropagation(); e.preventDefault(); toggle(); return; }   // E 进/出编辑态（观景态即可进入）
+        if (!editing()) return;
         if (saveKeys) { e.stopPropagation(); e.preventDefault(); save(); return; }
         if ((e.ctrlKey || e.metaKey) && (k === 'z' || k === 'Z')) { e.stopPropagation(); e.preventDefault(); undo(); return; }
-        if (k === 'e' || k === 'E') { e.stopPropagation(); e.preventDefault(); toggle(); return; }
         if (k === 'Escape') { commitText(); deselect(); e.stopPropagation(); return; }
         if (k === ' ' && selected) { e.stopPropagation(); e.preventDefault(); return; }   // 空格不翻页
         const step = e.shiftKey ? 10 : 1;
@@ -419,14 +561,27 @@
     addEventListener('resize', placeBar);
     document.addEventListener('blur', () => commitText(), true);
 
-    /* —— SSE：门禁结果 toast；保存成功后服务端广播刷新 —— */
-    if ('EventSource' in window) {
-        const es = new EventSource('/__deck/events');
+    /* —— 放映态：自动退出编辑（否则方向键会在观众面前隐形挪元素）—— */
+    new MutationObserver(() => {
+        if (document.body.classList.contains('presenting') && editing()) {
+            toast('已退出编辑进入放映', true);
+            toggle(false);
+        }
+    }).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+
+    /* —— SSE：门禁结果 toast；保存成功后服务端广播刷新。
+       bootstrap 在 body 尾部（晚于本脚本求值），故 load 时再初始化，saveServe 兜底重试 —— */
+    let es = null;
+    function initSSE() {
+        if (es || !window.__DECK_SERVE || !('EventSource' in window)) return;
+        es = new EventSource(window.__DECK_SERVE.events);
         es.addEventListener('gate', e => {
             const g = JSON.parse(e.data);
             toast((g.tool === 'overflow' ? '溢出门禁：' : '门禁：') + g.summary, g.ok);
         });
         es.addEventListener('reload', () => location.reload());
     }
+    initSSE();
+    addEventListener('load', initSSE, { once: true });
     if (new URLSearchParams(location.search).has('edit')) toggle(true);
 })();

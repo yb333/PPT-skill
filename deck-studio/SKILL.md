@@ -36,6 +36,7 @@ description: HTML 演示技能 deck-studio：用户要做 PPT、slides、汇报�
 
 ## Phase 0: 模式识别
 
+- **能力分级（先跑）**：`node scripts/probe.mjs [--vision]` 判定 vision/novision 档位，规则见 `references/tiers.md`——novision 档禁目检、复杂图示降级简单版式，其余流程不变
 - **Mode A 新建演示** → Phase 1
 - **Mode B 已有 PPTX 转换** → Phase 6
 - **Mode C 已有 HTML 演示增强** → 读文件理解结构后按 Phase 5 打磨
@@ -66,16 +67,17 @@ description: HTML 演示技能 deck-studio：用户要做 PPT、slides、汇报�
 
 输入：Phase 1 内容 + Phase 2 spec + Phase 3 风格。产出单 HTML 文件，**从模板起步、引擎由工具写入**：
 
-1. **复制模板**：`assets/templates/yunshan.html` 是全页型骨架基准（封面/目录/内容页/卡片网格/表格混排/深蓝金句/结束页 + 引擎标记块占位）。**必须用 `cp` 整文件复制起步，严禁凭记忆重写模板或省略内嵌 base64（封面背景/品牌 logo 是大体积内嵌资产，重写必丢——丢了封面就是白板，e2e 门禁强制封面起/结束页终）**。云山体系直接用；其他品牌删品牌资产、换 token，骨架照用。
-2. **填内容**：按 `references/page-types.md` 选型/增删 section（占位说明即"这栏该写什么"）；排版对照 `references/layout.md` 刻度；图表自绘读 `references/svg-diagrams.md`（inline SVG，禁 emoji/ASCII 图）；文案对照 `references/copywriting.md`；封面/结束页只改填写区文字，不重画。
-3. **申报动画**：默认零动画；需要时按 `references/animation.md` 机制速查表，在数据区声明 `DECK_AUTO` / `DECK_STEPS` / `DECK_COUNTUP` / `DECK_AMBIENT`（坐标 = 页 svg viewBox 体系）。
-4. **写引擎**：不手写引擎——`node <skill>/scripts/sync-engine.mjs <deck.html>` 把 `═══ DECK ENGINE ═══` 标记块写入。唯一源是 `assets/effects/` 五件套，**严禁手改块内代码**。
+1. **脚手架起步（标准路径）**：`node scripts/init-deck.mjs <输出.html> --title "标题" [--date YYYY.MM] [--template yunshan|none] [--sections N]`——一条命令产出完整骨架（头部 CSS/chrome 含 ⤓PPT 按钮/封面/结束页/引擎标记块+作者数据区/正确 document.title，云山封面结束页大图已压缩内嵌）；**--sections ≥4 自动插入目录页骨架**（3 条章级条目占位，填章名/一句话摘要/页码范围即可，data-toc 跳页已接好；<4 无目录——≤6 页 deck 不放目录是规则）**模型只填内容 section，禁止手工拼装固定件**（拼装事故清单见 D10/D11：漏 chrome、引擎块吞数据区、样式静默失败、title 残留）。
+2. **复制模板（脚手架不可用时的兜底）**：`assets/templates/yunshan.html` 是全页型骨架基准（封面/目录/内容页/卡片网格/表格混排/深蓝金句/结束页 + 引擎标记块占位）。**必须用 `cp` 整文件复制起步，严禁凭记忆重写模板或省略内嵌 base64（封面背景/品牌 logo 是大体积内嵌资产，重写必丢——丢了封面就是白板，e2e 门禁强制封面起/结束页终）**。云山体系直接用；其他品牌删品牌资产、换 token，骨架照用。
+3. **填内容**：按 `references/page-types.md` 选型/增删 section（占位说明即"这栏该写什么"）；排版对照 `references/layout.md` 刻度；图表自绘读 `references/svg-diagrams.md`（inline SVG，禁 emoji/ASCII 图）；文案对照 `references/copywriting.md`；封面/结束页只改填写区文字，不重画。
+4. **申报动画**：默认零动画；需要时按 `references/animation.md` 机制速查表，在数据区声明 `DECK_AUTO` / `DECK_STEPS` / `DECK_COUNTUP` / `DECK_AMBIENT`（坐标 = 页 svg viewBox 体系）。
+5. **写引擎**：不手写引擎——`node <skill>/scripts/sync-engine.mjs <deck.html>` 把 `═══ DECK ENGINE ═══` 标记块写入。唯一源是 `assets/effects/` 全家桶（含编辑内核），**严禁手改块内代码**。
 
 **必读**：`references/page-types.md`（页型选型）、`references/layout.md`（排版刻度）、`references/player.md`（行为契约与播放器壳 DOM——引擎行为以 assets/effects 唯一源为准）。
 
 **长 deck**：≤10 页一次生成；更长时分段写 section 再合并——`:root` 只留一份、`data-label` 全局唯一、SVG `<defs>` 的 gradient/marker id 不冲突、引擎块最后由 sync-engine 统一写入。
 
-## Phase 5: 迭代打磨（门禁四件套）
+## Phase 5: 迭代打磨（门禁五件套）
 
 每次修改后**必须**按序跑（`<skill>` = `~/.zcode/skills/deck-studio`；退出码非 0 就修，修完重跑；最多迭代 3 轮仍红则带着输出求助用户）：
 
@@ -84,6 +86,7 @@ node <skill>/scripts/sync-engine.mjs <deck.html> --check    # ① 引擎块与�
 node <skill>/scripts/verify/measure_overflow.mjs <deck.html> --all   # ② 全页溢出检测
 node <skill>/scripts/verify/e2e_check.mjs <deck.html>        # ③ 真实交互全路径（浏览/放映/目录/按键）
 node <skill>/scripts/verify/shot.mjs <deck.html> <data-label> /tmp/page.jpg   # ④ 重点页目检
+     node <skill>/scripts/verify/export_check.mjs <deck.html> [--fast]            # ⑤ 导出保真（交付前必跑；--fast 秒级）
 ```
 
 人工清单（门禁之外逐项过）：SVG viewBox ≥ 内容最大 y + padding；标签不重叠（相近 y 间隔 ≥14px）；卡片精确包裹内容；中文术语首现附英文括号；默认路径无绿/橙/紫（蓝板宪法）；渐变垂直方向；SVG `font-size="N"` 无 px 后缀；正文字号与单页文字量已由门禁自动检查（HTML ≥14px、SVG 有效 ≥9px、单页 ≤320 字——投影场景按 layout.md 场景分档升档）。完整清单与协作纪律（按页记录修改、逐章引导反馈、结构性意见在初版轮消化）见 `references/process.md`。
@@ -108,7 +111,10 @@ node <skill>/scripts/verify/shot.mjs <deck.html> <data-label> /tmp/page.jpg   # 
 node <skill>/scripts/serve/deck-serve.mjs <deck.html> [--port 4173]
 ```
 
-打开打印出的 `http://localhost:4173/?edit=1`（或页内按 E）进入编辑态：**点文字直接改；单击选中、拖拽挪位（靠近同页其他元素的边/中线自动吸附并画参考线）、方向键 1px 精调（Shift=10px，不吸附）；浮动工具条改主题色/字号步进（刻度档）/加粗/对齐；SVG 纯文本 `<text>` 双击可直接改写（含 tspan 的多段定位文本不可改，走对话）；Ctrl+Z 撤销；Ctrl+S 保存**=写回原文件（旧版自动留 `<deck>.bak`）并自动跑门禁——引擎块校验前置拦截（改了禁改区直接拒收），溢出/密度门禁后台跑完经 toast 推送，保存后页面自动刷新。
+编辑内核已随 sync 内嵌 deck（init-deck 起步即带）：**双击打开 HTML → 左下 ✏️ 或按 E 进入编辑态**（`--open` 起服务自动直达）：**点文字直接改；按住即拖——流式元素首次拖动自动转为自由定位（靠近同页其他元素的边/中线吸附并画参考线）、方向键 1px 精调（Shift=10px）；浮动工具条改主题色/字号步进（刻度含 9–12px SVG 小字档）/加粗/对齐；点空白即提交并取消选中；SVG 纯文本 `<text>` 双击可直接改写（含 tspan 的多段定位文本不可改，走对话）；Ctrl+Z 撤销；Ctrl+S 保存三通道自动分发**：
+  - deck-serve 在线 → 写回原文件（旧版自动留 `<deck>.bak`）+ 引擎块校验前置拦截 + 溢出/密度门禁后台经 toast 推送 + 自动刷新（power path）；
+  - Chrome/Edge → 系统另存对话框直接替换原文件（无服务，file:// 实测可用）；
+  - 其他浏览器 → 下载编辑后 HTML 自行替换（或直接 ⤓ 导出 PPTX）。
 
 **分工边界**（对用户说明白）：人手适合改字、换词、调色、挪几像素、改数据区动画参数；**增删页、挪章、画新图、动画序列设计仍走对话**——结构变化牵动目录/eyebrow/页码联动，编辑态不提供入口。编辑器由服务注入，deck 文件保持干净（直接双击打开=纯观看）；svg 内部与引擎标记块在编辑态不可改。人手改完 plan.md 随手同步（process.md 纪律）。
 

@@ -62,16 +62,16 @@ const authorRe = /const AUTHOR = '[^']*';/;
     }
 }
 
-const JS_SOURCES = ['player.js', 'stepfx.js', 'auto.js', 'countup.js', 'ambient.js', 'exporter.js']
+const JS_SOURCES = ['player.js', 'stepfx.js', 'auto.js', 'countup.js', 'ambient.js', 'exporter.js', 'editor.js']
     .map(f => readFileSync(join(ROOT, 'assets/effects', f), 'utf8').trimEnd());
-const FX_CSS = readFileSync(join(ROOT, 'assets/effects/effects.css'), 'utf8').trimEnd();
+const FX_CSS = readFileSync(join(ROOT, 'assets/effects/effects.css'), 'utf8').trimEnd();   // 编辑态样式由 editor.js 自注入
 const ENGINE_BEGIN = '/* ═══ DECK ENGINE:BEGIN';
 const ENGINE_END = '/* ═══ DECK ENGINE:END ═══ */';
 const CSS_BEGIN = '/* ═══ DECK FX CSS:BEGIN';
 const CSS_END = '/* ═══ DECK FX CSS:END ═══ */';
 
 const engineBlock = () =>
-    `${ENGINE_BEGIN} — 唯一源 deck-studio/assets/effects/ 四件套，勿手改；同步: node deck-studio/scripts/sync-engine.mjs ═══ */\n\n${JS_SOURCES.join('\n\n')}\n\n${ENGINE_END}`;
+    `${ENGINE_BEGIN} — 唯一源 deck-studio/assets/effects/（播放器+步进+流转+计数+导出+编辑内核），勿手改；同步: node deck-studio/scripts/sync-engine.mjs ═══ */\n\n${JS_SOURCES.join('\n\n')}\n\n${ENGINE_END}`;
 const cssBlock = () =>
     `${CSS_BEGIN} — 唯一源 deck-studio/assets/effects/effects.css，勿手改 ═══ */\n${FX_CSS}\n${CSS_END}`;
 

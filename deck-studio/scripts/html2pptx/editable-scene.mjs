@@ -241,6 +241,7 @@ export function collectEditableScene(slideIndex) {
       const style = getComputedStyle(node);
       if (style.display === 'none' || style.visibility === 'hidden' || node.closest('defs')) continue;
       const tag = node.tagName;
+      const elOpacity = (() => { const v = parseFloat(node.getAttribute('opacity')); return Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : 1; })();
       if (tag === 'circle' || tag === 'ellipse') {
         const isCircle = tag === 'circle';
         const cx = px(node.getAttribute('cx')), cy = px(node.getAttribute('cy'));
@@ -252,8 +253,8 @@ export function collectEditableScene(slideIndex) {
         const sw = px(node.getAttribute('stroke-width')) || 1;
         const shape = { type: 'shape', ...canvasRect(vrOf(cx - rx, cy - ry, rx * 2, ry * 2)), geometry: 'ellipse' };
         if (fill && fill.from) shape.gradient = fill;
-        else if (fill) { shape.fill = fill.hex; shape.opacity = fill.alpha; }
-        if (stroke && sw > 0) shape.border = { color: stroke.hex, opacity: stroke.alpha, width: sw * ux, dash: !!node.getAttribute('stroke-dasharray') };
+        else if (fill) { shape.fill = fill.hex; shape.opacity = fill.alpha * elOpacity; }
+        if (stroke && sw > 0) shape.border = { color: stroke.hex, opacity: stroke.alpha * elOpacity, width: sw * ux, dash: !!node.getAttribute('stroke-dasharray') };
         emit(shape, node, true);
       } else if (tag === 'rect') {
         const x = px(node.getAttribute('x')), y = px(node.getAttribute('y'));
@@ -265,8 +266,8 @@ export function collectEditableScene(slideIndex) {
         const sw = px(node.getAttribute('stroke-width')) || 1;
         const shape = { type: 'shape', ...canvasRect(vrOf(x, y, w, h)), geometry: rx > 0 ? 'roundRect' : 'rect', radius: rx * ux };
         if (fill && fill.from) shape.gradient = fill;
-        else if (fill) { shape.fill = fill.hex; shape.opacity = fill.alpha; }
-        if (stroke && sw > 0) shape.border = { color: stroke.hex, opacity: stroke.alpha, width: sw * ux, dash: !!node.getAttribute('stroke-dasharray') };
+        else if (fill) { shape.fill = fill.hex; shape.opacity = fill.alpha * elOpacity; }
+        if (stroke && sw > 0) shape.border = { color: stroke.hex, opacity: stroke.alpha * elOpacity, width: sw * ux, dash: !!node.getAttribute('stroke-dasharray') };
         emit(shape, node, true);
       } else if (tag === 'line') {
         const x1 = px(node.getAttribute('x1')), y1 = px(node.getAttribute('y1'));
@@ -295,7 +296,7 @@ export function collectEditableScene(slideIndex) {
         const family = firstFontFamily(getComputedStyle(node));
         const text = { type: 'text', ...canvasRect({ left, top: yvp - fontSize * 0.85, width: w, height }), width: w + 2, wrap: false,
           paragraphs: [{ align: anchor === 'middle' ? 'center' : anchor === 'end' ? 'right' : 'left',
-            runs: [{ text: content, fontFamily: family, fontSize, color: fill ? fill.hex : '000000', opacity: fill ? fill.alpha : 1, bold: weight >= 600 }] }] };
+            runs: [{ text: content, fontFamily: family, fontSize, color: fill ? fill.hex : '000000', opacity: fill ? fill.alpha * elOpacity : elOpacity, bold: weight >= 600 }] }] };
         emit(text, node);
       } else if (tag === 'path') {
         const d = node.getAttribute('d');

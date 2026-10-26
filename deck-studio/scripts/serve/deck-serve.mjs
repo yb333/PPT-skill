@@ -7,7 +7,8 @@
 //     Ctrl+S 保存 → 静态门禁（sync --check）通过才写回原文件（旧版留 <file>.bak）
 //              → 自动刷新；溢出门禁后台跑完经 SSE 推送 toast
 //
-// 边界（宪法）：编辑器由本服务注入，deck 文件保持干净（直接双击打开=纯观看）；
+// 边界（D12 后）：编辑内核已随 sync 内嵌进 deck（init-deck 起步的 deck 均带），本服务只负责
+// 写回原文件 + 保存门禁（power path）；旧 deck（无内嵌内核）自动兜底注入编辑器。
 // 结构变化（增删页/画新图/动画序列设计）不走编辑态，仍走对话；
 // SVG 内部与引擎标记块在编辑态不可改（改字例外走代码/对话）。
 //
@@ -24,10 +25,11 @@ const HERE = dirname(fileURLToPath(import.meta.url));            // scripts/serv
 const SCRIPTS = dirname(HERE);                                   // scripts
 const SYNC_MJS = join(SCRIPTS, 'sync-engine.mjs');
 const MEASURE_MJS = join(SCRIPTS, 'verify', 'measure_overflow.mjs');
-const EDITOR_JS = join(HERE, 'editor.js');
-const EDITOR_CSS = join(HERE, 'editor.css');
+const EFFECTS = join(HERE, '..', '..', 'assets', 'effects');   // 编辑内核唯一源（editor.js/editor.css）
+const EDITOR_JS = join(EFFECTS, 'editor.js');
 
 const argv = process.argv.slice(2);
+const OPEN = argv.includes('--open');
 const deckArg = argv.find(a => !a.startsWith('--'));
 const portIdx = argv.indexOf('--port');
 const PORT = portIdx >= 0 ? Number(argv[portIdx + 1]) || 4173 : 4173;
@@ -42,10 +44,13 @@ const MAX_BODY = 64 * 1024 * 1024;
 
 const readDeck = () => readFileSync(DECK, 'utf8');
 const inject = html => {
-    const tag = '<link rel="stylesheet" href="/__deck/editor.css" data-deck-editor="1">\n' +
-                '<script data-deck-editor="1" src="/__deck/editor.js"></script>\n';
     const at = html.lastIndexOf('</body>');
-    return at >= 0 ? html.slice(0, at) + tag + html.slice(at) : html + tag;
+    if (at < 0) return html;
+    const boot = '<script data-deck-editor="1">window.__DECK_SERVE={save:"/__deck/save",events:"/__deck/events"};</script>\n';
+    if (html.includes('window.__deckEditor')) return html.slice(0, at) + boot + html.slice(at);   // 内嵌内核：只注入服务通道
+    const legacy = boot +
+                   '<script data-deck-editor="1" src="/__deck/editor.js"></script>\n';            // 旧 deck 兜底（样式由 editor.js 自注入）
+    return html.slice(0, at) + legacy + html.slice(at);
 };
 
 // —— SSE：保存后的门禁结果与刷新指令推给所有打开的页面 ——
@@ -123,8 +128,7 @@ createServer((req, res) => {
         });
         return;
     }
-    const asset = { '/__deck/editor.js': [EDITOR_JS, 'text/javascript; charset=utf-8'],
-                    '/__deck/editor.css': [EDITOR_CSS, 'text/css; charset=utf-8'] }[url];
+    const asset = { '/__deck/editor.js': [EDITOR_JS, 'text/javascript; charset=utf-8'] }[url];
     if (asset) {
         res.writeHead(200, { 'content-type': asset[1] });
         res.end(readFileSync(asset[0]));
@@ -138,7 +142,12 @@ createServer((req, res) => {
     res.writeHead(url === '/favicon.ico' ? 204 : 404);
     res.end();
 }).listen(PORT, () => {
-    console.log(`deck-serve: http://localhost:${PORT}/?edit=1`);
+    const url = `http://localhost:${PORT}/?edit=1`;
+    console.log(`deck-serve: ${url}`);
     console.log(`  deck: ${DECK}（保存写回原文件，上一版留 ${BAK}）  Ctrl+C 停止`);
+    if (OPEN) {
+        const cmd = process.platform === 'win32' ? 'start' : process.platform === 'darwin' ? 'open' : 'xdg-open';
+        spawn(cmd, [url], { stdio: 'ignore', detached: true }).on('error', () => {});
+    }
 });
 function baseName(p) { return p.split(/[\\/]/).pop(); }

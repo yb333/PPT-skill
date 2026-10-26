@@ -348,6 +348,7 @@ function collectEditableScene(slideIndex) {
       const style = getComputedStyle(node);
       if (style.display === 'none' || style.visibility === 'hidden' || node.closest('defs')) continue;
       const tag = node.tagName;
+      const elOpacity = (() => { const v = parseFloat(node.getAttribute('opacity')); return Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : 1; })();
       if (tag === 'circle' || tag === 'ellipse') {
         const isCircle = tag === 'circle';
         const cx = px(node.getAttribute('cx')), cy = px(node.getAttribute('cy'));
@@ -359,8 +360,8 @@ function collectEditableScene(slideIndex) {
         const sw = px(node.getAttribute('stroke-width')) || 1;
         const shape = { type: 'shape', ...canvasRect(vrOf(cx - rx, cy - ry, rx * 2, ry * 2)), geometry: 'ellipse' };
         if (fill && fill.from) shape.gradient = fill;
-        else if (fill) { shape.fill = fill.hex; shape.opacity = fill.alpha; }
-        if (stroke && sw > 0) shape.border = { color: stroke.hex, opacity: stroke.alpha, width: sw * ux, dash: !!node.getAttribute('stroke-dasharray') };
+        else if (fill) { shape.fill = fill.hex; shape.opacity = fill.alpha * elOpacity; }
+        if (stroke && sw > 0) shape.border = { color: stroke.hex, opacity: stroke.alpha * elOpacity, width: sw * ux, dash: !!node.getAttribute('stroke-dasharray') };
         emit(shape, node, true);
       } else if (tag === 'rect') {
         const x = px(node.getAttribute('x')), y = px(node.getAttribute('y'));
@@ -372,8 +373,8 @@ function collectEditableScene(slideIndex) {
         const sw = px(node.getAttribute('stroke-width')) || 1;
         const shape = { type: 'shape', ...canvasRect(vrOf(x, y, w, h)), geometry: rx > 0 ? 'roundRect' : 'rect', radius: rx * ux };
         if (fill && fill.from) shape.gradient = fill;
-        else if (fill) { shape.fill = fill.hex; shape.opacity = fill.alpha; }
-        if (stroke && sw > 0) shape.border = { color: stroke.hex, opacity: stroke.alpha, width: sw * ux, dash: !!node.getAttribute('stroke-dasharray') };
+        else if (fill) { shape.fill = fill.hex; shape.opacity = fill.alpha * elOpacity; }
+        if (stroke && sw > 0) shape.border = { color: stroke.hex, opacity: stroke.alpha * elOpacity, width: sw * ux, dash: !!node.getAttribute('stroke-dasharray') };
         emit(shape, node, true);
       } else if (tag === 'line') {
         const x1 = px(node.getAttribute('x1')), y1 = px(node.getAttribute('y1'));
@@ -402,7 +403,7 @@ function collectEditableScene(slideIndex) {
         const family = firstFontFamily(getComputedStyle(node));
         const text = { type: 'text', ...canvasRect({ left, top: yvp - fontSize * 0.85, width: w, height }), width: w + 2, wrap: false,
           paragraphs: [{ align: anchor === 'middle' ? 'center' : anchor === 'end' ? 'right' : 'left',
-            runs: [{ text: content, fontFamily: family, fontSize, color: fill ? fill.hex : '000000', opacity: fill ? fill.alpha : 1, bold: weight >= 600 }] }] };
+            runs: [{ text: content, fontFamily: family, fontSize, color: fill ? fill.hex : '000000', opacity: fill ? fill.alpha * elOpacity : elOpacity, bold: weight >= 600 }] }] };
         emit(text, node);
       } else if (tag === 'path') {
         const d = node.getAttribute('d');
@@ -507,11 +508,25 @@ function collectEditableScene(slideIndex) {
 /* —— 页内元素抠图：foreignObject 透明底 PNG（图片类对象用） —— */
     async function elementPng(target) {
         const element = target.element;
+        // 直通：<img> 且源为 data URL 时保留原始字节——照片经 foreignObject+2x PNG 重拍会膨胀数十倍（无滤镜/变换时像素与源一致）
+        if (element instanceof HTMLImageElement) {
+            const style = getComputedStyle(element);
+            const m = element.src && element.src.match(/^data:image\/(jpeg|png);base64,(.+)$/);
+            const plain = style.filter === 'none' && style.transform === 'none' && Number(style.opacity) === 1;
+            if (m && plain) {
+                const bytes = Uint8Array.from(atob(m[2]), c => c.charCodeAt(0));
+                return { blob: new Blob([bytes], { type: 'image/' + m[1] }), ext: m[1] === 'jpeg' ? 'jpg' : 'png' };
+            }
+        }
         const rect = element.getBoundingClientRect();
         const w = Math.max(1, Math.round(rect.width)), h = Math.max(1, Math.round(rect.height));
         const deckCss = [...document.querySelectorAll('style')].map(s => s.textContent).join('\n');
         const clone = element.cloneNode(true);
-        if (target.kind === 'background') clone.querySelectorAll('*').forEach(n => { n.style.visibility = 'hidden'; });
+        if (target.kind === 'background') {
+            clone.querySelectorAll('*').forEach(n => { n.style.visibility = 'hidden'; });
+            clone.style.color = 'transparent';                     // 自身裸文本节点一并隐藏（否则图内烤字+可编辑文字双份）
+            clone.style.textShadow = 'none';
+        }
         // 克隆体强制钉在裁剪原点：绝对定位/偏移样式会让内容飞出裁剪画布，导出成全透明空图（元素消失根因）
         for (const [prop, value] of [['position', 'absolute'], ['left', '0'], ['top', '0'], ['margin', '0'],
                                      ['width', rect.width + 'px'], ['height', rect.height + 'px']]) {
@@ -628,15 +643,20 @@ function collectEditableScene(slideIndex) {
             return `<p:sp><p:nvSpPr><p:cNvPr id="${id}" name="形状 ${id}"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr>${props}</p:spPr></p:sp>`;
         }
         freeform(el, id) {
+            const w = Math.max(1, Math.round(el.width || 1)), h = Math.max(1, Math.round(el.height || 1));
+            const flat = [];
+            for (const seg of el.segs) { flat.push(seg.p); if (seg.c) flat.push(seg.c); }
+            const minX = Math.min(...flat.map(p => p[0])), maxX = Math.max(...flat.map(p => p[0]));
+            const minY = Math.min(...flat.map(p => p[1])), maxY = Math.max(...flat.map(p => p[1]));
+            const spanX = Math.max(1e-6, maxX - minX), spanY = Math.max(1e-6, maxY - minY);
             const commands = [];
             for (const seg of el.segs) {
-                const pt = p => `<a:pt x="${Math.round(p[0] * this.sx)}" y="${Math.round(p[1] * this.sy)}"/>`;
+                const pt = p => `<a:pt x="${Math.round((p[0] - minX) / spanX * w)}" y="${Math.round((p[1] - minY) / spanY * h)}"/>`;
                 if (seg.t === 'M') commands.push(`<a:moveTo>${pt(seg.p)}</a:moveTo>`);
                 else if (seg.t === 'L') commands.push(`<a:lnTo>${pt(seg.p)}</a:lnTo>`);
                 else if (seg.t === 'Q') commands.push(`<a:cubicBezTo>${pt(seg.c)}${pt(seg.c)}${pt(seg.p)}</a:cubicBezTo>`);
                 else if (seg.t === 'Z') commands.push('<a:close/>');
             }
-            const w = Math.max(1, Math.round(el.width || 1)), h = Math.max(1, Math.round(el.height || 1));
             const stroke = el.stroke || { color: '000000', width: 1.5 };
             const dash = stroke.dash ? '<a:prstDash val="dash"/>' : '<a:prstDash val="solid"/>';
             const geom = `<a:custGeom><a:avLst/><a:gdLst/><a:ahLst/><a:cxnLst/><a:rect/><a:pathLst><a:path w="${w}" h="${h}">${commands.join('')}</a:path></a:pathLst></a:custGeom>`;
@@ -677,11 +697,12 @@ function collectEditableScene(slideIndex) {
             for (const el of scene.elements) {
                 if (el.type === 'image') {
                     const target = window.__aicoEditableCapture.targets[el.target];
-                    const blob = await elementPng(target);
+                    const pass = await elementPng(target);
+                    const blob = pass.blob ?? pass, ext = pass.ext ?? 'png';
                     const u8 = new Uint8Array(await blob.arrayBuffer());
                     const key = u8.length + ':' + crc32(u8);
                     let name = mediaByHash.get(key);
-                    if (!name) { name = `image${++mediaSeq}.png`; mediaByHash.set(key, name); files.push({ name: `ppt/media/${name}`, data: u8 }); }
+                    if (!name) { name = `image${++mediaSeq}.${ext}`; mediaByHash.set(key, name); files.push({ name: `ppt/media/${name}`, data: u8 }); }
                     const rel = rels.length + 1;
                     rels.push([rel, 'image', `../media/${name}`]);
                     objects.push(picture(id++, name, rel, drawing.x(el.x), drawing.y(el.y), drawing.x(el.width), drawing.y(el.height)));
