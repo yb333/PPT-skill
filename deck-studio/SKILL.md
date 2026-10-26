@@ -127,7 +127,7 @@ node <skill>/scripts/serve/deck-serve.mjs <deck.html> [--port 4173]
 ```bash
 node install.mjs             # 全局安装 → ~/.config/opencode/skills/deck-studio
 node install.mjs --local     # 项目级 → <cwd>/.opencode/skills/deck-studio
-node install.mjs --check     # 只查环境（Node/浏览器/playwright-core/Python）
+node install.mjs --check     # 只查环境（Node/浏览器/playwright-core/Python+python-pptx）
 node install.mjs --pack      # 打离线包（vendor playwright-core，整目录拷去内网后 node install.mjs）
 ```
 

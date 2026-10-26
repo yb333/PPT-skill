@@ -13,11 +13,12 @@
 //
 // 环境契约：Node ≥18（硬依赖）；浏览器 Chrome 首选（playwright 原生 channel），
 // 无 Chrome 自动回退 Edge/Chromium（win 内网常见形态零配置）；playwright-core 供
-// 离线跑门禁，自动 vendor；Python 仅命令行 PPTX 转换管线用，可选。
+// 离线跑门禁，自动 vendor；Python+python-pptx 仅命令行 PPTX 转换/提取管线用，
+// 可选（--check 一并探测，deck 内 ⤓ 按钮导出不依赖）。
 
 import { cpSync, rmSync, existsSync, readFileSync, writeFileSync, readdirSync, statSync } from 'node:fs';
 import { join, dirname, resolve, sep } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { browserCandidates } from './scripts/verify/load-playwright.mjs';
 
@@ -26,8 +27,17 @@ const NAME = 'deck-studio';
 const argv = process.argv.slice(2);
 const getOpt = flag => { const i = argv.indexOf(flag); return i >= 0 ? argv[i + 1] : undefined; };
 
-if (argv.includes('--help') || argv.includes('-h')) {
-    console.log(readFileSync(__filename, 'utf8').match(/\/\*[\s\S]*?\*\//)[0].replace(/^\/\*\*? ?| ?\*\/$/g, ''));
+/* 直接运行才执行安装流程；被 release.mjs import 复用发布原语时不启动 */
+const isEntry = import.meta.url === pathToFileURL(resolve(process.argv[1] || '')).href;
+
+if (isEntry && (argv.includes('--help') || argv.includes('-h'))) {
+    console.log(`deck-studio 技能安装器
+用法:
+  node install.mjs                  全局安装 → ~/.config/opencode/skills/deck-studio
+  node install.mjs --local          项目级安装 → <当前目录>/.opencode/skills/deck-studio
+  node install.mjs --target <dir>   安装到指定 skills 根目录（如 ~/.zcode/skills）
+  node install.mjs --check          只检查环境，不安装
+  node install.mjs --pack [输出目录] 打离线包（vendor playwright-core，整目录拷去内网）`);
     process.exit(0);
 }
 
@@ -42,10 +52,10 @@ const firstExisting = list => list.find(p => p && existsSync(p));
 const pythonCmd = () => {
     const candidates = process.platform === 'win32' ? [['py', '-3'], ['python'], ['python3']] : [['python3'], ['python']];
     for (const parts of candidates) {
-        try { if (spawnSync(parts[0], parts.slice(1).concat(['--version']), { encoding: 'utf8' }).status === 0) return parts.join(' '); }
+        try { if (spawnSync(parts[0], parts.slice(1).concat(['--version']), { encoding: 'utf8' }).status === 0) return parts; }
         catch {}
     }
-    return '';
+    return null;
 };
 
 /* —— playwright-core 源：技能目录内已 vendor（离线包形态）→ 研发仓根 node_modules（开发形态）—— */
@@ -60,7 +70,11 @@ function envReport() {
     const vsrc = vendorSource();
     console.log(`  playwright-core ${vsrc ? '✓ ' + vsrc : '✗ 未找到——完整克隆本仓应自带（deck-studio/node_modules/）；若确缺，在有网机器 npm install playwright-core 或跑 --pack'}`);
     const py = pythonCmd();
-    console.log(`  Python    ${py ? '✓ ' + py : '○ 未装（可选，仅命令行 PPTX 转换用；deck 内 ⤓ 按钮导出不依赖）'}`);
+    if (!py) console.log('  Python    ○ 未装（可选，仅命令行 PPTX 转换/提取用；deck 内 ⤓ 按钮导出不依赖）');
+    else {
+        const pptxOk = spawnSync(py[0], py.slice(1).concat(['-c', 'import pptx']), { encoding: 'utf8', timeout: 20000 }).status === 0;
+        console.log(`  Python    ✓ ${py.join(' ')}${pptxOk ? '（python-pptx ✓）' : '（✗ 缺 python-pptx——CLI 高保真导出与 PPTX→HTML 提取需要，pip install python-pptx；deck 内 ⤓ 按钮导出不依赖）'}`);
+    }
     return { nodeOk, browsers: found, vsrc };
 }
 
@@ -70,6 +84,13 @@ function copySkill(dest) {
         const base = src.split(sep).pop();
         return base !== '.DS_Store' && base !== '__pycache__' && !src.endsWith('.saving.tmp');
     } });
+}
+
+/* 发布原语（release.mjs 复用）：同一份过滤 + MIT 归属随包，安装/发布两通道永不漂移 */
+export function publishSkill(dest) {
+    copySkill(dest);
+    const noticeSrc = join(HERE, '..', 'THIRD-PARTY-NOTICE.md');   // vendor 派生代码的 MIT 归属随包走
+    if (existsSync(noticeSrc)) cpSync(noticeSrc, join(dest, 'THIRD-PARTY-NOTICE.md'));
 }
 
 function main() {
@@ -109,9 +130,7 @@ function main() {
 
     // ── 4. 复制本体（整目录原子替换）──
     console.log(`[4/5] ${packMode ? '打包' : '复制'}技能本体...`);
-    copySkill(dest);
-    const noticeSrc = join(HERE, '..', 'THIRD-PARTY-NOTICE.md');   // vendor 派生代码的 MIT 归属随包走
-    if (existsSync(noticeSrc)) cpSync(noticeSrc, join(dest, 'THIRD-PARTY-NOTICE.md'));
+    publishSkill(dest);
     console.log(`  ✓ ${dest}`);
     console.log();
 
@@ -152,5 +171,7 @@ function main() {
     return 0;
 }
 
-try { process.exit(main()); }
-catch (e) { console.error('\n✗ 安装出错：' + (e?.stack || e)); process.exit(1); }
+if (isEntry) {
+    try { process.exit(main()); }
+    catch (e) { console.error('\n✗ 安装出错：' + (e?.stack || e)); process.exit(1); }
+}

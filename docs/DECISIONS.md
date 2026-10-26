@@ -82,6 +82,10 @@ busy .finally 兜底、序列绑定页号防串页、CSS 副本漂移也要标�
 
 **发布机制（2026-09-24）**：skill 安装目录（~/.zcode/skills/deck-studio）不再软链到仓，改为定稿后由
 `deck-studio/scripts/release.mjs` 整体复制发布——仓只做开发，安装目录永远等于最近一次发布的定稿内容。
+（2026-10-26 修正：release 曾裸 cpSync 漂移出两处缺陷——__pycache__ 缓存随包、THIRD-PARTY-NOTICE
+未随包；改为复用 install.mjs 导出的 publishSkill 发布原语，两通道同一份过滤+归属逻辑。同日
+install --check 补 python-pptx 探测——CLI 高保真导出与 Mode B 提取硬依赖该 pip 包，原先只查
+python 可执行文件会假绿。）
 vendor 导出工具 html2pptx 自根 scripts/ 收编进 skill（导出是承诺功能，必须随包分发）；测试夹具移至
 仓根 tests/（非成品内容）；skill 成品内不保留研发史叙事与本地路径指针。
 
