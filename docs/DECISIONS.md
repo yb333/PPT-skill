@@ -177,3 +177,7 @@ install.sh / install.bat）、发布器（release.mjs）、归属文件、docs /
 复用 install.mjs 导出的 publishSkill。安装/发布产物随之变纯：不含任何安装器文件，仅多
 THIRD-PARTY-NOTICE（归属描述技能内 vendor 派生代码，随装携带）与 _install_meta.json
 指纹两个安装期写入。旧契约"技能本体即安装包（deck-studio/ 目录整个拷走就能装）"随之废除。
+（2026-10-28 追加：vendor 剪裁——playwright-core 内嵌的 MCP 技能文档
+`lib/tools/skills/`（含 3 个 playwright 自家 SKILL.md）随整包 vendor 混进技能体，导致线上
+平台技能扫描误报"多个 skill"；仓内 vendor 副本删除该目录 + install.mjs 复制过滤加
+VENDOR_PRUNE 二道防线，重新 vendor 新版时自动剪除。剪裁合法：MIT 包、包内 LICENSE 保留。）

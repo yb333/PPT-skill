@@ -84,11 +84,16 @@ function envReport() {
     return { nodeOk, browsers: found, vsrc };
 }
 
+/* vendor 剪裁：playwright-core 内嵌的 MCP 技能文档（lib/tools/skills/，含其 SKILL.md）
+   会混淆宿主平台的技能扫描，一律不随技能体分发（仓内 vendor 副本已删，此为二道防线） */
+const VENDOR_PRUNE = ['node_modules', 'playwright-core', 'lib', 'tools', 'skills'].join(sep);
+const notPruned = src => !src.includes(VENDOR_PRUNE);
+
 function copySkill(dest) {
     rmSync(dest, { recursive: true, force: true });
     cpSync(SKILL, dest, { recursive: true, filter: src => {
         const base = src.split(sep).pop();
-        return base !== '.DS_Store' && base !== '__pycache__' && !src.endsWith('.saving.tmp');
+        return notPruned(src) && base !== '.DS_Store' && base !== '__pycache__' && !src.endsWith('.saving.tmp');
     } });
 }
 
@@ -155,7 +160,7 @@ function main() {
         const vdest = join(payload, 'node_modules', 'playwright-core');
         if (!join(env.vsrc, sep).startsWith(join(SKILL, sep))) {    // 源已在技能目录内则 copySkill 已带，不重复拷
             rmSync(join(payload, 'node_modules'), { recursive: true, force: true });
-            cpSync(env.vsrc, vdest, { recursive: true });
+            cpSync(env.vsrc, vdest, { recursive: true, filter: notPruned });
         }
         console.log(`  ✓ ${vdest}`);
     } else {
