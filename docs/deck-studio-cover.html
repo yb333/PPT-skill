@@ -3,6 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <title>deck-studio cover</title>
+<!-- 尺寸变体渲染（平台规格 648×320 ≤5M）：副本中给 body 追加
+     transform:scale(0.675); transform-origin:0 0; top:-46px
+     （画布保持 1920×1080，缩放填宽 1296，垂直居中裁切到 640 高），
+     node /tmp 渲染脚本 以 1296x640 dsf2 出 2592×1280 后 sips -Z 648。
+     1920×1080 全尺寸：直接渲染本文件（1920x1080 dsf2）。 -->
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { width: 1920px; height: 1080px; overflow: hidden; }
