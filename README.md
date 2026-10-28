@@ -1,13 +1,13 @@
-# frontend-slides — PPT 技能研发仓
+# frontend-slides 仓 — deck-studio 技能的研发之家
 
-HTML 演示技能（frontend-slides）的版本控制之家：技能本体 + 工具脚本 + 参考资料。
-技能优化重构工作在本仓进行；deck 成品不进本仓（属各项目自己的文档，如 design-dev-agent 的 `docs/ppt/`）。
+本仓产出**一个技能**：`deck-studio/`（HTML 演示技能，现役唯一）。其余都是项目侧支撑——
+安装器/发布器、决策记录与成品文档、vendor 源、测试。前身 frontend-slides 技能已退役
+（2026-10-28 删除根 SKILL.md / STYLE_PRESETS.md，git 历史即归档）。
 
 ## 目录
 
 ```
 frontend-slides/
-├── SKILL.md / STYLE_PRESETS.md  # 原技能（已冻结，不动——融合成果在 deck-studio/）
 ├── deck-studio/             # 技能本体（纯净，只含技能执行所需：SKILL.md + references/
 │                            #   assets/ + scripts/ + config.json + vendor node_modules）
 ├── install.mjs              # 一键安装器（项目工具，不进技能目录；--check/--pack/--target）

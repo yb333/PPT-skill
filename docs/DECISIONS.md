@@ -35,6 +35,8 @@ AICO 的优点分两半处理（2026-09-22 修正：先前"原生已有等价物
 - 切换机制（到达验收后）：原 `frontend-slides` 技能退役归档，`deck-studio` 保持自己的名字成为唯一正式技能。
 - 切换验收标准（暂定，试用中可修）：真实项目试用 ≥2 次全程走通；溢出门禁退出码 0；导出页数平价且 PowerPoint/WPS 打开正常；含 reveal 动画的页面导出快照无空白；播放器壳在 Chrome/Safari 全屏放映正常。
 
+> （2026-10-28 收尾：切换早已完成，根 `SKILL.md` / `STYLE_PRESETS.md` 按「退役归档」删除——git 历史即归档，冻结保留的过渡安排结束；仓内不再有任何旧技能文件，deck-studio/ 是唯一技能。）
+
 ### D5 vendor 纪律（2026-09-22，沿袭建仓决策）
 
 根目录 `scripts/` 保持 vendor 原样（与上游 AICO-PPT@4b5fcdf 可 diff）；适配副本进 `deck-studio/scripts/`，文件头注明来源与改动点。适配四要点（deck ↔ 工具契约）：
