@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>deck-studio icon</title>
+<style>
+  * { margin: 0; padding: 0; }
+  html, body { width: 1024px; height: 1024px; overflow: hidden; }
+  body { background: #0a1428; }
+</style>
+</head>
+<body>
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none">
+  <defs>
+    <!-- 底：明亮一些的深蓝，对角光 -->
+    <linearGradient id="bg" x1="0" y1="0" x2="220" y2="1024" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2a5ce8"/>
+      <stop offset=".52" stop-color="#16409f"/>
+      <stop offset="1" stop-color="#0c2464"/>
+    </linearGradient>
+    <radialGradient id="bgGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse"
+                    gradientTransform="translate(300 200) rotate(66) scale(900 760)">
+      <stop stop-color="#7db0ff" stop-opacity=".5"/>
+      <stop offset="1" stop-color="#7db0ff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="sheen" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#ffffff" stop-opacity=".2"/>
+      <stop offset=".4" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="flowOut" x1="800" y1="470" x2="946" y2="432" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#60a5fa"/>
+      <stop offset="1" stop-color="#bfdbfe" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="softG" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="14"/>
+    </filter>
+    <filter id="cardShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="26" stdDeviation="30" flood-color="#040a1e" flood-opacity=".55"/>
+    </filter>
+  </defs>
+
+  <!-- 圆角方底 -->
+  <rect width="1024" height="1024" rx="228" fill="url(#bg)"/>
+  <rect width="1024" height="1024" rx="228" fill="url(#bgGlow)"/>
+  <rect x="3" y="3" width="1018" height="1018" rx="225" stroke="#a9c8ff" stroke-opacity=".28" stroke-width="3"/>
+
+  <!-- 流出幻灯片的光线（在卡片后面，落到深底上） -->
+  <circle cx="902" cy="428" r="34" fill="#93c5fd" opacity=".55" filter="url(#softG)"/>
+  <path d="M 806 468 C 856 456, 900 446, 944 436" stroke="url(#flowOut)" stroke-width="15"
+        stroke-linecap="round"/>
+  <circle cx="944" cy="436" r="15" fill="#dbeafe"/>
+  <circle cx="944" cy="436" r="30" fill="#60a5fa" opacity=".5" filter="url(#softG)"/>
+
+  <!-- 叠影卡 -->
+  <rect x="228" y="348" width="640" height="360" rx="30" fill="#dbeafe" opacity=".22"/>
+
+  <!-- 主幻灯片（亮页） -->
+  <g filter="url(#cardShadow)">
+    <rect x="192" y="316" width="640" height="360" rx="30" fill="#f8fafd"/>
+  </g>
+  <!-- 页内抽象内容：眉标 / 标题 / 两行文本条 -->
+  <rect x="246" y="382" width="104" height="18" rx="9" fill="#60a5fa"/>
+  <rect x="246" y="422" width="322" height="30" rx="15" fill="#1e40af"/>
+  <rect x="246" y="484" width="242" height="16" rx="8" fill="#c3d2e8"/>
+  <rect x="246" y="512" width="188" height="16" rx="8" fill="#d4dff0"/>
+  <!-- 流线：页内亮蓝动线，穿出右缘 -->
+  <path d="M 250 600 C 420 574, 560 520, 800 470" stroke="#3b82f6" stroke-opacity=".38"
+        stroke-width="44" stroke-linecap="round" filter="url(#softG)"/>
+  <path d="M 250 600 C 420 574, 560 520, 800 470" stroke="#2563eb" stroke-width="26"
+        stroke-linecap="round"/>
+  <circle cx="800" cy="470" r="26" fill="#1d4ed8"/>
+  <circle cx="800" cy="470" r="11" fill="#eff6ff"/>
+</svg>
+</body>
+</html>
