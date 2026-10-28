@@ -163,3 +163,15 @@ tests/fixture-svg-opacity.html 稳定复现）。回归资产：tests/export_gat
   图表内每个框/每条线/每段字均可在 PPT 中直接调整。image 导出此前已实战验证
   （14/14 平价、16:9 满屏图、终态=去 chrome/去动画层/方角满幅）。分工：放映/分享用 image（按钮
   一键，秒级）；需要改字的场景用 editable（--mode editable，分钟级，SVG 图内文字不可编辑）。
+
+### D13 技能主体纯净性：安装器等项目工具移出 deck-studio/（2026-10-28）
+
+用户定则：项目产出物是技能，`deck-studio/` 必须只含技能执行所需——SKILL.md、references、
+assets、scripts（运行时工具）、config.json、vendor node_modules。安装器（install.mjs /
+install.sh / install.bat）、发布器（release.mjs）、归属文件、docs / tests 一律住项目侧
+（仓库根），不进技能目录。落地：四件套移至仓库根，install.mjs 按"安装器与 deck-studio/
+并排"重写路径解析（SKILL = HERE/deck-studio，仓库根与离线包根同构）；--pack 离线包形态
+改为 installer + deck-studio/ 并排（内网在包根运行安装器即装）；release.mjs 同移根目录，
+复用 install.mjs 导出的 publishSkill。安装/发布产物随之变纯：不含任何安装器文件，仅多
+THIRD-PARTY-NOTICE（归属描述技能内 vendor 派生代码，随装携带）与 _install_meta.json
+指纹两个安装期写入。旧契约"技能本体即安装包（deck-studio/ 目录整个拷走就能装）"随之废除。

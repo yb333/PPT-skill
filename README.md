@@ -7,36 +7,35 @@ HTML 演示技能（frontend-slides）的版本控制之家：技能本体 + 工
 
 ```
 frontend-slides/
-├── SKILL.md                 # 原技能本体（已冻结，不动——融合工作在 deck-studio/ 进行）
-├── STYLE_PRESETS.md         # 原风格预设库（已冻结）
-├── deck-studio/             # 新技能（融合重构工作线，标准 skill 结构）
-│   ├── SKILL.md             # 精简核心（<500 行）
-│   ├── references/          # 按需加载参考（theme/presets/layout/svg/animation/player/copywriting/process）
-│   ├── scripts/verify/      # 适配版验证工具（溢出门禁 + 单页截图，契约见文件头）
-│   └── assets/              # 测试 fixture（干净版/溢出版）
-├── scripts/
-│   ├── html2pptx/           # HTML → PPTX 导出管线（vendor 原样，待适配进 deck-studio）
-│   └── verify/              # 渲染验证工具（vendor 原样，与上游可 diff）
-├── docs/
-│   ├── DECISIONS.md         # 融合重构决策记录（动工前先读）
-│   └── aico-ppt-references/ # AICO-PPT 方法论文档（vendor 参考，见 THIRD-PARTY-NOTICE.md）
+├── SKILL.md / STYLE_PRESETS.md  # 原技能（已冻结，不动——融合成果在 deck-studio/）
+├── deck-studio/             # 技能本体（纯净，只含技能执行所需：SKILL.md + references/
+│                            #   assets/ + scripts/ + config.json + vendor node_modules）
+├── install.mjs              # 一键安装器（项目工具，不进技能目录；--check/--pack/--target）
+├── install.sh / install.bat # mac/linux 与 win 双击入口
+├── release.mjs              # 研发发布器：deck-studio/ → ~/.zcode/skills/deck-studio
+├── scripts/                 # vendor 原样（html2pptx/verify，与上游 AICO-PPT 可 diff）
+├── docs/                    # DECISIONS.md 决策记录、成品 deck 与方法论文档
+├── tests/                   # 门禁回归测试与 fixture
 └── THIRD-PARTY-NOTICE.md    # vendor 代码归属与来源
 ```
 
-## 安装（ZCode 技能挂载）
+## 安装 / 发布
 
-本机已按 symlink 方式挂载：
+安装器住仓库根，技能本体取同级 `deck-studio/`（克隆即完整，playwright-core 已随仓 vendor）：
 
 ```bash
-ln -s /Users/yuanbo/frontend-slides ~/.zcode/skills/frontend-slides
+node install.mjs             # 全局安装 → ~/.config/opencode/skills/deck-studio（纯技能本体）
+node install.mjs --check     # 只查环境（Node/浏览器/playwright-core/Python+python-pptx）
+node install.mjs --pack      # 打离线包（installer + deck-studio/ 并排，拷去内网在包根安装）
+node release.mjs             # 研发机发布 → ~/.zcode/skills/deck-studio
 ```
 
-改动即时生效。若 ZCode 某版本不识别 symlink，退化为拷贝安装（`SKILL.md` + `STYLE_PRESETS.md` + 所需脚本目录）。
+win 双击仓库根 `install.bat`。安装产物只含技能执行所需 + MIT 归属 + `_install_meta.json` 指纹，不含安装器。
 
 ## 运行依赖（仅 vendor 脚本需要）
 
-- Node ≥ 18、本机 Google Chrome（playwright 以 `channel:'chrome'` 连接）
-- `npm install`（装 playwright-core）
+- Node ≥ 18、本机 Chrome 或 Edge（playwright 连接，无 Chrome 自动回退）
+- playwright-core 已随仓 vendor（`deck-studio/node_modules/`）；Python+python-pptx 可选（仅 CLI PPTX 管线）
 
 验证工具用法（对 1920×1080 固定画布 deck；对现有自适应 deck 需先适配选择器）：
 

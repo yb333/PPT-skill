@@ -1,14 +1,19 @@
 #!/usr/bin/env node
-// install.mjs — deck-studio 一键安装（模式参考 design-dev-agent install.py：编号步骤/双模式/--check/安装指纹/win 防闪退）
+// install.mjs — deck-studio 一键安装（项目工具，住仓库根；技能本体 deck-studio/ 保持纯净）
+// 模式参考 design-dev-agent install.py：编号步骤/双模式/--check/安装指纹/win 防闪退。
 // ---------------------------------------------------------------------
-// 只安装技能本体（本目录全部内容）；研发仓的 docs/tests/dev 件不在本目录，天然不带。
+// 布局契约（D13）：安装器（本文件 + install.sh/install.bat + release.mjs）与
+// THIRD-PARTY-NOTICE / docs / tests 都住项目侧，不进技能目录；deck-studio/ 只含
+// 技能执行所需（SKILL.md/references/assets/scripts/config.json + vendor node_modules）。
+// 本文件在仓库根或离线包根运行，技能本体取同级 deck-studio/；
+// --pack 打出的包 = 安装器 + deck-studio/ 并排，内网整目录拷走零改动可用。
 //
 // 用法：
 //   node install.mjs                  # 全局安装 → ~/.config/opencode/skills/deck-studio
 //   node install.mjs --local          # 项目级安装 → <当前目录>/.opencode/skills/deck-studio
 //   node install.mjs --target <dir>   # 安装到指定 skills 根目录（如 ~/.zcode/skills）
 //   node install.mjs --check          # 只检查环境，不安装
-//   node install.mjs --pack [输出目录] # 打离线包（vendor playwright-core，整目录拷去内网）
+//   node install.mjs --pack [输出目录] # 打离线包（installer + deck-studio/ 并排，整目录拷去内网）
 //   node install.mjs --help
 //
 // 环境契约：Node ≥18（硬依赖）；浏览器 Chrome 首选（playwright 原生 channel），
@@ -20,9 +25,10 @@ import { cpSync, rmSync, existsSync, readFileSync, writeFileSync, readdirSync, s
 import { join, dirname, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { spawnSync } from 'node:child_process';
-import { browserCandidates } from './scripts/verify/load-playwright.mjs';
+import { browserCandidates } from './deck-studio/scripts/verify/load-playwright.mjs';
 
-const HERE = dirname(fileURLToPath(import.meta.url));            // 技能根（本文件在 deck-studio/ 内）
+const HERE = dirname(fileURLToPath(import.meta.url));            // 项目根/离线包根（安装器所在处）
+const SKILL = join(HERE, 'deck-studio');                         // 技能本体（纯净，不含安装器）
 const NAME = 'deck-studio';
 const argv = process.argv.slice(2);
 const getOpt = flag => { const i = argv.indexOf(flag); return i >= 0 ? argv[i + 1] : undefined; };
@@ -37,12 +43,12 @@ if (isEntry && (argv.includes('--help') || argv.includes('-h'))) {
   node install.mjs --local          项目级安装 → <当前目录>/.opencode/skills/deck-studio
   node install.mjs --target <dir>   安装到指定 skills 根目录（如 ~/.zcode/skills）
   node install.mjs --check          只检查环境，不安装
-  node install.mjs --pack [输出目录] 打离线包（vendor playwright-core，整目录拷去内网）`);
+  node install.mjs --pack [输出目录] 打离线包（installer + deck-studio/ 并排，整目录拷去内网）`);
     process.exit(0);
 }
 
 const engineVersion = () =>
-    (readFileSync(join(HERE, 'assets', 'effects', 'player.js'), 'utf8')
+    (readFileSync(join(SKILL, 'assets', 'effects', 'player.js'), 'utf8')
         .match(/DECK_ENGINE_VERSION = '([^']+)'/) || [])[1] || 'unknown';
 const gitCommit = () => {
     const r = spawnSync('git', ['rev-parse', '--short', 'HEAD'], { cwd: HERE, encoding: 'utf8', timeout: 10000 });
@@ -58,9 +64,9 @@ const pythonCmd = () => {
     return null;
 };
 
-/* —— playwright-core 源：技能目录内已 vendor（离线包形态）→ 研发仓根 node_modules（开发形态）—— */
+/* —— playwright-core 源：技能目录内已 vendor（克隆/离线包形态）→ 项目根 node_modules（开发形态）—— */
 const vendorSource = () =>
-    firstExisting([join(HERE, 'node_modules', 'playwright-core'), join(HERE, '..', 'node_modules', 'playwright-core')]);
+    firstExisting([join(SKILL, 'node_modules', 'playwright-core'), join(HERE, 'node_modules', 'playwright-core')]);
 
 function envReport() {
     const nodeOk = Number(process.versions.node.split('.')[0]) >= 18;
@@ -80,16 +86,17 @@ function envReport() {
 
 function copySkill(dest) {
     rmSync(dest, { recursive: true, force: true });
-    cpSync(HERE, dest, { recursive: true, filter: src => {
+    cpSync(SKILL, dest, { recursive: true, filter: src => {
         const base = src.split(sep).pop();
         return base !== '.DS_Store' && base !== '__pycache__' && !src.endsWith('.saving.tmp');
     } });
 }
 
-/* 发布原语（release.mjs 复用）：同一份过滤 + MIT 归属随包，安装/发布两通道永不漂移 */
+/* 发布原语（release.mjs 复用）：同一份过滤 + MIT 归属随包，安装/发布两通道永不漂移。
+   归属源头住项目根、不进技能本体；装出的技能目录因含 vendor 派生代码而随装携带一份。 */
 export function publishSkill(dest) {
     copySkill(dest);
-    const noticeSrc = join(HERE, '..', 'THIRD-PARTY-NOTICE.md');   // vendor 派生代码的 MIT 归属随包走
+    const noticeSrc = join(HERE, 'THIRD-PARTY-NOTICE.md');
     if (existsSync(noticeSrc)) cpSync(noticeSrc, join(dest, 'THIRD-PARTY-NOTICE.md'));
 }
 
@@ -102,11 +109,11 @@ function main() {
     // ── 1. 扫描本体 ──
     console.log('[1/5] 扫描技能本体...');
     const required = ['SKILL.md', 'references', 'assets', 'scripts', 'config.json'];
-    const missing = required.filter(f => !existsSync(join(HERE, f)));
-    if (missing.length) { console.log(`  ✗ 本体不完整，缺: ${missing.join(', ')}（请在 deck-studio/ 目录内运行）`); return 1; }
-    const counts = Object.fromEntries(readdirSync(HERE).filter(f => statSync(join(HERE, f)).isDirectory())
-        .map(d => [d, readdirSync(join(HERE, d)).length]));
-    console.log(`  ✓ SKILL.md + ${Object.entries(counts).map(([d, n]) => `${d}/${n} 项`).join(' + ')}`);
+    const missing = required.filter(f => !existsSync(join(SKILL, f)));
+    if (missing.length) { console.log(`  ✗ 本体不完整，缺: ${missing.join(', ')}（请在仓库根或离线包根运行——技能本体取同级 deck-studio/）`); return 1; }
+    const counts = Object.fromEntries(readdirSync(SKILL).filter(f => statSync(join(SKILL, f)).isDirectory())
+        .map(d => [d, readdirSync(join(SKILL, d)).length]));
+    console.log(`  ✓ ${SKILL}  （SKILL.md + ${Object.entries(counts).map(([d, n]) => `${d}/${n} 项`).join(' + ')}）`);
     console.log();
 
     const checkOnly = argv.includes('--check');
@@ -117,7 +124,7 @@ function main() {
     if (argv.includes('--local')) skillsRoot = resolve(process.cwd(), '.opencode', 'skills');
     else if (getOpt('--target')) skillsRoot = resolve(getOpt('--target'));
     else skillsRoot = join(process.env.HOME || process.env.USERPROFILE, '.config', 'opencode', 'skills');
-    const dest = packMode ? resolve(getOpt('--pack') && argv[argv.indexOf('--pack') + 1] || join(HERE, '..', NAME + '-offline')) : join(skillsRoot, NAME);
+    const dest = packMode ? resolve(getOpt('--pack') && argv[argv.indexOf('--pack') + 1] || join(HERE, NAME + '-offline')) : join(skillsRoot, NAME);
     console.log(`[2/5] ${packMode ? '离线包输出' : '安装目标'}: ${dest}${packMode ? '' : `（${argv.includes('--local') ? '项目级' : '全局'}）`}`);
     console.log();
 
@@ -128,18 +135,26 @@ function main() {
 
     if (checkOnly) { console.log('检查模式，不执行安装。'); return env.nodeOk ? 0 : 1; }
 
-    // ── 4. 复制本体（整目录原子替换）──
+    // ── 4. 复制本体（纯技能体；pack 形态 = 本体 + 安装器并排）──
     console.log(`[4/5] ${packMode ? '打包' : '复制'}技能本体...`);
-    publishSkill(dest);
-    console.log(`  ✓ ${dest}`);
+    if (packMode) {
+        copySkill(join(dest, 'deck-studio'));
+        for (const f of ['install.mjs', 'install.sh', 'install.bat', 'THIRD-PARTY-NOTICE.md'])
+            if (existsSync(join(HERE, f))) cpSync(join(HERE, f), join(dest, f));
+        console.log(`  ✓ ${dest}  （deck-studio/ + 安装器并排，内网在包根 node install.mjs 即装）`);
+    } else {
+        publishSkill(dest);
+        console.log(`  ✓ ${dest}  （纯技能本体，不含安装器）`);
+    }
     console.log();
 
     // ── 5. vendor playwright-core（离线门禁）──
     console.log('[5/5] vendor playwright-core...');
+    const payload = packMode ? join(dest, 'deck-studio') : dest;
     if (env.vsrc) {
-        const vdest = join(dest, 'node_modules', 'playwright-core');
-        if (!join(env.vsrc, sep).startsWith(join(HERE, sep))) {    // 源已在包内（离线包二次安装）则不重复拷
-            rmSync(join(dest, 'node_modules'), { recursive: true, force: true });
+        const vdest = join(payload, 'node_modules', 'playwright-core');
+        if (!join(env.vsrc, sep).startsWith(join(SKILL, sep))) {    // 源已在技能目录内则 copySkill 已带，不重复拷
+            rmSync(join(payload, 'node_modules'), { recursive: true, force: true });
             cpSync(env.vsrc, vdest, { recursive: true });
         }
         console.log(`  ✓ ${vdest}`);
@@ -148,12 +163,14 @@ function main() {
     }
     console.log();
 
-    // ── 指纹 ──
-    const meta = { commit: gitCommit(), engine: engineVersion(), node: process.version,
-                   browsers: env.browsers, installed_at: new Date().toISOString().slice(0, 19) };
-    writeFileSync(join(dest, '_install_meta.json'), JSON.stringify(meta, null, 2));
-    console.log(`  指纹: ${join(dest, '_install_meta.json')}（commit=${meta.commit}）`);
-    console.log();
+    // ── 指纹（仅安装写；pack 不是安装产物）──
+    if (!packMode) {
+        const meta = { commit: gitCommit(), engine: engineVersion(), node: process.version,
+                       browsers: env.browsers, installed_at: new Date().toISOString().slice(0, 19) };
+        writeFileSync(join(dest, '_install_meta.json'), JSON.stringify(meta, null, 2));
+        console.log(`  指纹: ${join(dest, '_install_meta.json')}（commit=${meta.commit}）`);
+        console.log();
+    }
 
     if (packMode) {
         console.log('离线包就绪：整个目录拷到内网任意位置，进入目录后运行');

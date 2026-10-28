@@ -122,16 +122,16 @@ node <skill>/scripts/serve/deck-serve.mjs <deck.html> [--port 4173]
 
 ## 一键安装（opencode / 内网）
 
-技能本体即安装包：`deck-studio/` 目录整个拷走就能装（研发仓的 docs/tests/dev 件不在目录内，天然不带）。
+安装器是项目工具，住仓库根（`install.mjs` + `install.sh`/`install.bat` 入口），**不进技能目录**——`deck-studio/` 只含技能执行所需（SKILL.md / references / assets / scripts / config.json + vendor node_modules），本体保持纯净。克隆仓库后在根目录运行：
 
 ```bash
 node install.mjs             # 全局安装 → ~/.config/opencode/skills/deck-studio
 node install.mjs --local     # 项目级 → <cwd>/.opencode/skills/deck-studio
 node install.mjs --check     # 只查环境（Node/浏览器/playwright-core/Python+python-pptx）
-node install.mjs --pack      # 打离线包（vendor playwright-core，整目录拷去内网后 node install.mjs）
+node install.mjs --pack      # 打离线包（installer + deck-studio/ 并排；拷去内网后在包根 node install.mjs）
 ```
 
-安装脚本自动完成：环境检测（Node ≥18；**Chrome 为首选浏览器**，机器无 Chrome 时自动回退 Edge/Chromium——win 内网常见形态零配置，也可用 `AICO_BROWSER_EXECUTABLE` 显式指定）、vendor playwright-core 进技能目录（**已随仓 vendor 在 `deck-studio/node_modules/`，克隆即完整，离线跑门禁**）、安装指纹 `_install_meta.json`。win 双击 `install.bat`（自动找 Node、跑完暂停）。装完重启 opencode 即被发现。
+安装脚本自动完成：环境检测（Node ≥18；**Chrome 为首选浏览器**，机器无 Chrome 时自动回退 Edge/Chromium——win 内网常见形态零配置，也可用 `AICO_BROWSER_EXECUTABLE` 显式指定）、复制纯技能本体到目标目录、vendor playwright-core（**已随仓 vendor 在 `deck-studio/node_modules/`，克隆即完整，离线跑门禁**）、MIT 归属与安装指纹 `_install_meta.json` 随安装写入（归属描述技能内 vendor 派生代码故随装携带；安装器文件不随装）。win 双击仓库根 `install.bat`（自动找 Node、跑完暂停）。装完重启 opencode 即被发现。
 
 ## 参考文档索引（按需读取，不要一次全读）
 
